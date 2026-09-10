@@ -12,13 +12,19 @@ async def is_phone_authorized(
     phone_number: str,
     session: AsyncSession,
 ) -> bool:
-    phone_number_id = await session.scalar(
-        select(PhoneNumber.id).where(
+    return await get_active_phone_number(phone_number, session) is not None
+
+
+async def get_active_phone_number(
+    phone_number: str,
+    session: AsyncSession,
+) -> PhoneNumber | None:
+    return await session.scalar(
+        select(PhoneNumber).where(
             PhoneNumber.phone_number == phone_number,
             PhoneNumber.is_active.is_(True),
         ),
     )
-    return phone_number_id is not None
 
 
 async def get_owned_phone_number_or_404(

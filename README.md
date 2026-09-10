@@ -220,6 +220,24 @@ A consulta considera autorizado somente um registro com o mesmo telefone e
 `authorized=False`. Nesta etapa, a decisão é apenas registrada no log: nenhuma
 mensagem é processada ou respondida.
 
+### Logs de mensagens
+
+Cada mensagem recebida gera um registro em `message_logs`, contendo o payload
+original da Meta em JSON. Os valores iniciais são `direction="INBOUND"`,
+`processed=false` e `blocked=true` quando o remetente não está autorizado.
+
+O relacionamento no SQLAlchemy é um-para-muitos:
+
+```text
+PhoneNumber (1) ──< MessageLog (N)
+```
+
+`PhoneNumber.message_logs` representa a lista de logs daquele número, enquanto
+`MessageLog.phone_number` aponta para o número que originou o log. No banco,
+`message_logs.phone_number_id` é uma chave estrangeira para `phone_numbers.id`.
+Esse campo pode ser `NULL` para manter logs de remetentes não autorizados. Se
+um número for removido, `ON DELETE SET NULL` preserva os logs já recebidos.
+
 ### Conceitos
 
 - **Session:** unidade de trabalho do SQLAlchemy; acompanha alterações e é o
