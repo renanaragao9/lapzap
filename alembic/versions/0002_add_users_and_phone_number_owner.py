@@ -59,7 +59,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_phone_numbers_user_id_users", "phone_numbers", type_="foreignkey")
+    op.drop_constraint(
+        "fk_phone_numbers_user_id_users", "phone_numbers", type_="foreignkey"
+    )
     op.drop_index("ix_phone_numbers_user_id", table_name="phone_numbers")
     op.drop_column("phone_numbers", "user_id")
     op.drop_table("users")

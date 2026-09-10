@@ -148,6 +148,53 @@ Response
 Não há endpoint de criação de usuários nesta etapa; o primeiro usuário deve ser
 inserido previamente com senha gerada por `hash_password()`.
 
+## Webhook do WhatsApp Cloud API
+
+O webhook está disponível em `/api/v1/webhooks/whatsapp` e possui dois métodos:
+
+- `GET`: a Meta o chama uma vez ao configurar ou validar a URL. Ela envia
+  `hub.mode=subscribe`, `hub.verify_token` e `hub.challenge`. Quando o token
+  recebido é igual a `META_VERIFY_TOKEN`, a API devolve exatamente o valor de
+  `hub.challenge` como texto puro; assim a Meta confirma que a URL pertence à
+  aplicação configurada.
+- `POST`: a Meta envia eventos como mensagens recebidas e atualizações de
+  status em JSON. Nesta etapa, a API apenas registra o objeto recebido no log e
+  responde `200 OK`, sem responder mensagens nem chamar a Graph API.
+
+Configure no `.env`:
+
+```env
+META_VERIFY_TOKEN=choose-a-random-verify-token
+META_ACCESS_TOKEN=replace-with-meta-access-token
+META_PHONE_NUMBER_ID=replace-with-phone-number-id
+META_API_VERSION=vXX.X
+```
+
+`META_VERIFY_TOKEN` é um segredo escolhido por você e informado também no
+painel da Meta. Ele não é um token da Meta: serve apenas para a verificação do
+GET. Os demais valores ficam configurados agora para uma futura chamada à API,
+mas ainda não são usados.
+
+### Teste local
+
+Com a API em execução, teste a validação manualmente:
+
+```bash
+curl -i "http://127.0.0.1:8000/api/v1/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=SEU_TOKEN&hub.challenge=desafio"
+```
+
+E simule um evento:
+
+```bash
+curl -i -X POST http://127.0.0.1:8000/api/v1/webhooks/whatsapp \
+  -H "Content-Type: application/json" \
+  -d '{"object":"whatsapp_business_account","entry":[]}'
+```
+
+A Meta não consegue alcançar `localhost`; para validar no painel dela, exponha
+a porta local por um túnel HTTPS público, como ngrok ou Cloudflare Tunnel, e
+cadastre a URL pública com o mesmo caminho.
+
 ### Conceitos
 
 - **Session:** unidade de trabalho do SQLAlchemy; acompanha alterações e é o

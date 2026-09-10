@@ -9,9 +9,15 @@ class Settings(BaseSettings):
     db_host: str
     db_port: int
     db_name: str
+
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    meta_verify_token: str
+    meta_access_token: str
+    meta_phone_number_id: str
+    meta_api_version: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
