@@ -8,6 +8,19 @@ from app.database.models.user import User
 from app.numbers.schemas import PhoneNumberInput
 
 
+async def is_phone_authorized(
+    phone_number: str,
+    session: AsyncSession,
+) -> bool:
+    phone_number_id = await session.scalar(
+        select(PhoneNumber.id).where(
+            PhoneNumber.phone_number == phone_number,
+            PhoneNumber.is_active.is_(True),
+        ),
+    )
+    return phone_number_id is not None
+
+
 async def get_owned_phone_number_or_404(
     phone_number_id: int,
     current_user: User,

@@ -195,6 +195,31 @@ A Meta não consegue alcançar `localhost`; para validar no painel dela, exponha
 a porta local por um túnel HTTPS público, como ngrok ou Cloudflare Tunnel, e
 cadastre a URL pública com o mesmo caminho.
 
+### Autorização do remetente
+
+Quando o POST contém mensagens recebidas, a aplicação extrai cada
+`messages[].from`, adiciona o prefixo `+` (o formato usado em `phone_numbers`)
+e chama `is_phone_authorized(phone_number)`.
+
+```text
+Meta
+  ↓
+Webhook
+  ↓
+extrair telefone
+  ↓
+buscar phone_numbers
+  ↓
+verificar is_active
+  ↓
+authorized / unauthorized
+```
+
+A consulta considera autorizado somente um registro com o mesmo telefone e
+`is_active = true`. Telefones ausentes e telefones inativos são registrados como
+`authorized=False`. Nesta etapa, a decisão é apenas registrada no log: nenhuma
+mensagem é processada ou respondida.
+
 ### Conceitos
 
 - **Session:** unidade de trabalho do SQLAlchemy; acompanha alterações e é o
