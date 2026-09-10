@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.database.models.message_log import MessageLog
 from app.database.models.phone_number import PhoneNumber
 from app.database.models.user import User
 from app.numbers.schemas import PhoneNumberInput
@@ -25,6 +29,20 @@ async def get_active_phone_number(
             PhoneNumber.is_active.is_(True),
         ),
     )
+
+
+async def is_rate_limited(phone_number_id: int, session: AsyncSession) -> bool:
+    window_start = datetime.now(timezone.utc) - timedelta(minutes=1)
+    message_count = await session.scalar(
+        select(func.count())
+        .select_from(MessageLog)
+        .where(
+            MessageLog.phone_number_id == phone_number_id,
+            MessageLog.direction == "INBOUND",
+            MessageLog.created_at >= window_start,
+        ),
+    )
+    return (message_count or 0) >= settings.rate_limit_per_minute
 
 
 async def get_owned_phone_number_or_404(

@@ -238,6 +238,22 @@ PhoneNumber (1) ──< MessageLog (N)
 Esse campo pode ser `NULL` para manter logs de remetentes não autorizados. Se
 um número for removido, `ON DELETE SET NULL` preserva os logs já recebidos.
 
+### Limite de mensagens
+
+`RATE_LIMIT_PER_MINUTE=10` define quantas mensagens recebidas de um número
+ativo podem passar por minuto. Antes de gravar o log de uma mensagem, a API
+conta os logs `INBOUND` daquele `phone_number_id` criados nos últimos 60
+segundos.
+
+- Menos de 10: o log é salvo com `blocked=false` e o fluxo permanece liberado.
+- Dez ou mais: o novo log é salvo com `blocked=true`; não há processamento
+  posterior nesta etapa.
+- Número ausente ou inativo: também é salvo com `blocked=true`, sem aplicar o
+  rate limit.
+
+O controle usa apenas MySQL e SQLAlchemy. É apropriado para o estágio atual;
+Redis poderá ser considerado depois se o volume ou a concorrência crescer.
+
 ### Conceitos
 
 - **Session:** unidade de trabalho do SQLAlchemy; acompanha alterações e é o

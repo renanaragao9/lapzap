@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.database.models.message_log import MessageLog
 from app.database.session import get_session
-from app.numbers.service import get_active_phone_number
+from app.numbers.service import get_active_phone_number, is_rate_limited
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +84,11 @@ async def receive_whatsapp_event(event: dict[str, Any], session: Session) -> Res
     for message in extract_incoming_messages(event):
         phone_number = await get_active_phone_number(message.phone_number, session)
         authorized = phone_number is not None
+        rate_limited = (
+            await is_rate_limited(phone_number.id, session) if phone_number else False
+        )
+        blocked = not authorized or rate_limited
+
         session.add(
             MessageLog(
                 phone_number_id=phone_number.id if phone_number else None,
@@ -92,13 +97,17 @@ async def receive_whatsapp_event(event: dict[str, Any], session: Session) -> Res
                 direction="INBOUND",
                 payload=event,
                 processed=False,
-                blocked=not authorized,
+                blocked=blocked,
             )
         )
+
+        await session.flush()
+
         logger.info(
-            "WhatsApp sender authorization: phone_number=%s authorized=%s",
+            "WhatsApp sender authorization: phone_number=%s authorized=%s rate_limited=%s",
             message.phone_number,
             authorized,
+            rate_limited,
         )
 
     await session.commit()
