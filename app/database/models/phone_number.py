@@ -1,14 +1,11 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+from app.database.models.message_log import MessageLog
 from app.database.models.user import User
-
-if TYPE_CHECKING:
-    from app.database.models.message_log import MessageLog
 
 
 class PhoneNumber(Base):
@@ -40,6 +37,6 @@ class PhoneNumber(Base):
 
     user: Mapped[User] = relationship(back_populates="phone_numbers")
 
-    message_logs: Mapped[list["MessageLog"]] = relationship(
+    message_logs: Mapped[list[MessageLog]] = relationship(
         back_populates="phone_number"
     )

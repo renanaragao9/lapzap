@@ -254,6 +254,26 @@ segundos.
 O controle usa apenas MySQL e SQLAlchemy. É apropriado para o estágio atual;
 Redis poderá ser considerado depois se o volume ou a concorrência crescer.
 
+## Seed de desenvolvimento
+
+Após aplicar as migrations, crie um usuário e seus números autorizados com:
+
+```bash
+python -m app.database.seed
+```
+
+O padrão de desenvolvimento cria `admin@example.com`, senha `123456` e dois
+telefones de exemplo. Você pode sobrescrever qualquer valor:
+
+```bash
+python -m app.database.seed --name "Outro usuário" --email "outro@example.com" \
+  --password "outra-senha" --phone "+5585977777777"
+```
+
+O comando armazena apenas o hash Argon2 da senha. Ele é idempotente: não cria
+o mesmo usuário ou telefone duas vezes. Um telefone já associado a outro
+usuário interrompe o seed para evitar transferência indevida de propriedade.
+
 ### Conceitos
 
 - **Session:** unidade de trabalho do SQLAlchemy; acompanha alterações e é o

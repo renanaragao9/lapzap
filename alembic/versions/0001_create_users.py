@@ -1,8 +1,8 @@
-"""Create phone_numbers table.
+"""Create users table.
 
-Revision ID: 0001_create_phone_numbers
+Revision ID: 0001_create_users
 Revises:
-Create Date: 2026-09-09
+Create Date: 2026-09-10
 """
 
 from collections.abc import Sequence
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0001_create_phone_numbers"
+revision: str = "0001_create_users"
 down_revision: str | None = None
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
@@ -19,10 +19,11 @@ depends_on: Sequence[str] | None = None
 
 def upgrade() -> None:
     op.create_table(
-        "phone_numbers",
+        "users",
         sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
-        sa.Column("phone_number", sa.String(length=20), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=False),
+        sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.Column(
             "is_active",
             sa.Boolean(),
@@ -41,9 +42,9 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
-        sa.UniqueConstraint("phone_number", name="uq_phone_numbers_phone_number"),
+        sa.UniqueConstraint("email", name="uq_users_email"),
     )
 
 
 def downgrade() -> None:
-    op.drop_table("phone_numbers")
+    op.drop_table("users")
