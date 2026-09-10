@@ -1,0 +1,15 @@
+# Variáveis de ambiente locais
+.env
+
+# Ambientes virtuais
+.venv/
+venv/
+
+# Cache e artefatos Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Arquivos de IDE
+.vscode/
+.idea/
