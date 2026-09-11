@@ -16,10 +16,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     rate_limit_per_minute: int
 
-    meta_verify_token: str
-    meta_access_token: str
-    meta_phone_number_id: str
-    meta_api_version: str
+    evolution_api_url: str
+    evolution_api_key: str
+    evolution_instance_name: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

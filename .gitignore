@@ -9,7 +9,11 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
 
 # Arquivos de IDE
 .vscode/
 .idea/
+
+# Arquivos de sistema
+.tmp/

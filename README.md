@@ -2,7 +2,12 @@
 
 Base inicial de estudos para uma futura integração:
 
-`WhatsApp → Meta API → FastAPI → OCR/IA → WhatsApp`
+`WhatsApp → Evolution API → FastAPI → OCR/IA → WhatsApp`
+
+Documentação complementar:
+
+- [Configuração](docs/configuration.md)
+- [Como testar](docs/testing.md)
 
 Nesta etapa, o projeto contém apenas uma API FastAPI com configuração por
 variáveis de ambiente, uma rota de saúde e a base para persistência em MySQL.
@@ -148,111 +153,39 @@ Response
 Não há endpoint de criação de usuários nesta etapa; o primeiro usuário deve ser
 inserido previamente com senha gerada por `hash_password()`.
 
-## Webhook do WhatsApp Cloud API
+## Configuração da Evolution API
 
-O webhook está disponível em `/api/v1/webhooks/whatsapp` e possui dois métodos:
-
-- `GET`: a Meta o chama uma vez ao configurar ou validar a URL. Ela envia
-  `hub.mode=subscribe`, `hub.verify_token` e `hub.challenge`. Quando o token
-  recebido é igual a `META_VERIFY_TOKEN`, a API devolve exatamente o valor de
-  `hub.challenge` como texto puro; assim a Meta confirma que a URL pertence à
-  aplicação configurada.
-- `POST`: a Meta envia eventos como mensagens recebidas e atualizações de
-  status em JSON. Nesta etapa, a API apenas registra o objeto recebido no log e
-  responde `200 OK`, sem responder mensagens nem chamar a Graph API.
-
-Configure no `.env`:
+Defina as variáveis no `.env`:
 
 ```env
-META_VERIFY_TOKEN=choose-a-random-verify-token
-META_ACCESS_TOKEN=replace-with-meta-access-token
-META_PHONE_NUMBER_ID=replace-with-phone-number-id
-META_API_VERSION=vXX.X
+EVOLUTION_API_URL=http://localhost:8080
+EVOLUTION_API_KEY=
+EVOLUTION_INSTANCE_NAME=
 ```
 
-`META_VERIFY_TOKEN` é um segredo escolhido por você e informado também no
-painel da Meta. Ele não é um token da Meta: serve apenas para a verificação do
-GET. Os demais valores ficam configurados agora para uma futura chamada à API,
-mas ainda não são usados.
+- `EVOLUTION_API_URL`: endereço base da Evolution API, sem credenciais.
+- `EVOLUTION_API_KEY`: chave da Evolution API; mantenha-a somente no `.env`.
+- `EVOLUTION_INSTANCE_NAME`: nome da instância WhatsApp configurada na
+  Evolution API.
 
-### Teste local
+No painel ou na configuração da instância Evolution, aponte o webhook para:
 
-Com a API em execução, teste a validação manualmente:
-
-```bash
-curl -i "http://127.0.0.1:8000/api/v1/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=SEU_TOKEN&hub.challenge=desafio"
+```text
+POST /api/v1/webhooks/whatsapp
 ```
 
-E simule um evento:
+Nesta etapa, o endpoint aceita um objeto JSON, registra o payload e, quando o
+evento é de mensagem, registra informações básicas disponíveis: instância,
+remetente, tipo, texto e ID. Ele não envia mensagens, não usa a API key e não
+cria registros no banco.
+
+Teste localmente:
 
 ```bash
-curl -i -X POST http://127.0.0.1:8000/api/v1/webhooks/whatsapp \
+curl -X POST http://127.0.0.1:8000/api/v1/webhooks/whatsapp \
   -H "Content-Type: application/json" \
-  -d '{"object":"whatsapp_business_account","entry":[]}'
+  -d '{"event":"messages.upsert","instance":"lapzap-dev","data":{"key":{"remoteJid":"5585999999999@s.whatsapp.net","id":"BAE5F001"},"messageType":"conversation","message":{"conversation":"Olá, LapZap!"}}}'
 ```
-
-A Meta não consegue alcançar `localhost`; para validar no painel dela, exponha
-a porta local por um túnel HTTPS público, como ngrok ou Cloudflare Tunnel, e
-cadastre a URL pública com o mesmo caminho.
-
-### Autorização do remetente
-
-Quando o POST contém mensagens recebidas, a aplicação extrai cada
-`messages[].from`, adiciona o prefixo `+` (o formato usado em `phone_numbers`)
-e chama `is_phone_authorized(phone_number)`.
-
-```text
-Meta
-  ↓
-Webhook
-  ↓
-extrair telefone
-  ↓
-buscar phone_numbers
-  ↓
-verificar is_active
-  ↓
-authorized / unauthorized
-```
-
-A consulta considera autorizado somente um registro com o mesmo telefone e
-`is_active = true`. Telefones ausentes e telefones inativos são registrados como
-`authorized=False`. Nesta etapa, a decisão é apenas registrada no log: nenhuma
-mensagem é processada ou respondida.
-
-### Logs de mensagens
-
-Cada mensagem recebida gera um registro em `message_logs`, contendo o payload
-original da Meta em JSON. Os valores iniciais são `direction="INBOUND"`,
-`processed=false` e `blocked=true` quando o remetente não está autorizado.
-
-O relacionamento no SQLAlchemy é um-para-muitos:
-
-```text
-PhoneNumber (1) ──< MessageLog (N)
-```
-
-`PhoneNumber.message_logs` representa a lista de logs daquele número, enquanto
-`MessageLog.phone_number` aponta para o número que originou o log. No banco,
-`message_logs.phone_number_id` é uma chave estrangeira para `phone_numbers.id`.
-Esse campo pode ser `NULL` para manter logs de remetentes não autorizados. Se
-um número for removido, `ON DELETE SET NULL` preserva os logs já recebidos.
-
-### Limite de mensagens
-
-`RATE_LIMIT_PER_MINUTE=10` define quantas mensagens recebidas de um número
-ativo podem passar por minuto. Antes de gravar o log de uma mensagem, a API
-conta os logs `INBOUND` daquele `phone_number_id` criados nos últimos 60
-segundos.
-
-- Menos de 10: o log é salvo com `blocked=false` e o fluxo permanece liberado.
-- Dez ou mais: o novo log é salvo com `blocked=true`; não há processamento
-  posterior nesta etapa.
-- Número ausente ou inativo: também é salvo com `blocked=true`, sem aplicar o
-  rate limit.
-
-O controle usa apenas MySQL e SQLAlchemy. É apropriado para o estágio atual;
-Redis poderá ser considerado depois se o volume ou a concorrência crescer.
 
 ## Seed de desenvolvimento
 
@@ -294,4 +227,3 @@ Resposta esperada de `GET /health`:
   "status": "ok"
 }
 ```
-# lapzap
