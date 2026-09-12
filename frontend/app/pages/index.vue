@@ -1,5 +1,5 @@
 <script setup lang="ts">
-await navigateTo('/numbers')
+await navigateTo("/numbers");
 </script>
 
 <template></template>

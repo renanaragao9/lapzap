@@ -1,21 +1,21 @@
 <script setup lang="ts">
 interface PhoneNumber {
-  id: number
-  name: string
-  phone_number: string
+  id: number;
+  name: string;
+  phone_number: string;
 }
 
-const route = useRoute()
-const api = useApi()
-const id = route.params.id as string
+const route = useRoute();
+const api = useApi();
+const id = route.params.id as string;
 
 const { data: phoneNumber, error } = await useAsyncData(`number-${id}`, () =>
-  api<PhoneNumber>(`/numbers/${id}`)
-)
+  api<PhoneNumber>(`/numbers/${id}`),
+);
 
 async function update(payload: { name: string; phone_number: string }) {
-  await api(`/numbers/${id}`, { method: 'PUT', body: payload })
-  await navigateTo('/numbers')
+  await api(`/numbers/${id}`, { method: "PUT", body: payload });
+  await navigateTo("/numbers");
 }
 </script>
 

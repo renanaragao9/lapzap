@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const api = useApi()
+const api = useApi();
 
 async function create(payload: { name: string; phone_number: string }) {
-  await api('/numbers', { method: 'POST', body: payload })
-  await navigateTo('/numbers')
+  await api("/numbers", { method: "POST", body: payload });
+  await navigateTo("/numbers");
 }
 </script>
 

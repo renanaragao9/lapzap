@@ -1,10 +1,10 @@
 <script setup lang="ts">
-const { token, logout } = useAuth()
-const route = useRoute()
+const { token, logout } = useAuth();
+const route = useRoute();
 
 function handleLogout() {
-  logout()
-  navigateTo('/login')
+  logout();
+  navigateTo("/login");
 }
 </script>
 
@@ -82,12 +82,14 @@ table {
   width: 100%;
   border-collapse: collapse;
 }
-th, td {
+th,
+td {
   text-align: left;
   padding: 0.5rem;
   border-bottom: 1px solid #ddd;
 }
-button, .button {
+button,
+.button {
   cursor: pointer;
 }
 </style>

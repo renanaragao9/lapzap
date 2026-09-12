@@ -1,26 +1,30 @@
 <script setup lang="ts">
 interface PhoneNumber {
-  id: number
-  name: string
-  phone_number: string
-  is_active: boolean
+  id: number;
+  name: string;
+  phone_number: string;
+  is_active: boolean;
 }
 
-const api = useApi()
-const { data: numbers, refresh, error } = await useAsyncData('numbers', () =>
-  api<PhoneNumber[]>('/numbers')
-)
+const api = useApi();
+const {
+  data: numbers,
+  refresh,
+  error,
+} = await useAsyncData("numbers", () => api<PhoneNumber[]>("/numbers"));
 
 async function remove(id: number) {
-  if (!confirm('Remover este número?')) return
-  await api(`/numbers/${id}`, { method: 'DELETE' })
-  await refresh()
+  if (!confirm("Remover este número?")) return;
+  await api(`/numbers/${id}`, { method: "DELETE" });
+  await refresh();
 }
 </script>
 
 <template>
   <div>
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div
+      style="display: flex; justify-content: space-between; align-items: center"
+    >
       <h1>Números autorizados</h1>
       <NuxtLink to="/numbers/new" class="button">Novo número</NuxtLink>
     </div>
@@ -40,7 +44,7 @@ async function remove(id: number) {
         <tr v-for="n in numbers" :key="n.id">
           <td>{{ n.name }}</td>
           <td>{{ n.phone_number }}</td>
-          <td>{{ n.is_active ? 'Sim' : 'Não' }}</td>
+          <td>{{ n.is_active ? "Sim" : "Não" }}</td>
           <td>
             <NuxtLink :to="`/numbers/${n.id}`">Editar</NuxtLink>
             &nbsp;
