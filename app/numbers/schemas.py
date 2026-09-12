@@ -11,6 +11,7 @@ class PhoneNumberInput(BaseModel):
         max_length=20,
         pattern=r"^\+[1-9]\d{7,14}$",
     )
+
     name: str = Field(min_length=1, max_length=255)
 
 

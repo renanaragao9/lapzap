@@ -174,10 +174,17 @@ No painel ou na configuração da instância Evolution, aponte o webhook para:
 POST /api/v1/webhooks/whatsapp
 ```
 
-Nesta etapa, o endpoint aceita um objeto JSON, registra o payload e, quando o
-evento é de mensagem, registra informações básicas disponíveis: instância,
-remetente, tipo, texto e ID. Ele não envia mensagens, não usa a API key e não
-cria registros no banco.
+O endpoint aceita um objeto JSON e registra o payload. Quando o evento é de
+mensagem, ele também:
+
+- checa se o remetente é um `phone_number` autorizado e ativo;
+- checa se o remetente excedeu `RATE_LIMIT_PER_MINUTE` mensagens no último
+  minuto;
+- grava um `MessageLog` (payload bruto, tipo, remetente vinculado quando
+  autorizado) marcado como `blocked=True` quando o remetente não é
+  autorizado ou está em rate limit.
+
+Ele não envia mensagens e não usa a API key.
 
 Teste localmente:
 

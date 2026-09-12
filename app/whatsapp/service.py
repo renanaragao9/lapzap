@@ -1,16 +1,21 @@
 import logging
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.models.message_log import MessageLog
+from app.numbers.service import get_active_phone_number, is_rate_limited
 from app.whatsapp.schemas import EvolutionWebhookPayload
 
 logger = logging.getLogger(__name__)
 
 
 class WhatsAppService:
-    def process_webhook(
+    async def process_webhook(
         self,
         payload: EvolutionWebhookPayload,
         raw_payload: dict[str, Any],
+        session: AsyncSession,
     ) -> None:
         logger.info("Evolution webhook payload received: %s", raw_payload)
 
@@ -19,13 +24,14 @@ class WhatsAppService:
             return
 
         data = payload.data or {}
-        key = data.get("key") if isinstance(data.get("key"), dict) else {}
-        message = (
-            data.get("message") if isinstance(data.get("message"), dict) else {}
-        )
+        raw_key = data.get("key")
+        key: dict[str, Any] = raw_key if isinstance(raw_key, dict) else {}
+        raw_message = data.get("message")
+        message: dict[str, Any] = raw_message if isinstance(raw_message, dict) else {}
         remote_jid = key.get("remoteJid") or key.get("remoteJidAlt")
         sender = remote_jid.split("@", 1)[0] if isinstance(remote_jid, str) else None
         message_type = data.get("messageType") or self.get_message_type(message)
+        message_id = key.get("id") or data.get("id")
 
         logger.info(
             "Evolution message event: instance=%s sender=%s type=%s text=%s message_id=%s",
@@ -33,7 +39,38 @@ class WhatsAppService:
             sender,
             message_type,
             self.get_text(message),
-            key.get("id") or data.get("id"),
+            message_id,
+        )
+
+        if sender is None or not isinstance(message_id, str):
+            return
+
+        phone_number = await get_active_phone_number(f"+{sender}", session)
+        authorized = phone_number is not None
+        rate_limited = (
+            await is_rate_limited(phone_number.id, session) if phone_number else False
+        )
+        blocked = not authorized or rate_limited
+
+        session.add(
+            MessageLog(
+                phone_number_id=phone_number.id if phone_number else None,
+                external_message_id=message_id,
+                message_type=message_type or "UNKNOWN",
+                direction="INBOUND",
+                payload=raw_payload,
+                processed=False,
+                blocked=blocked,
+            )
+        )
+        await session.commit()
+
+        logger.info(
+            "Evolution sender authorization: sender=%s authorized=%s rate_limited=%s blocked=%s",
+            sender,
+            authorized,
+            rate_limited,
+            blocked,
         )
 
     @staticmethod
