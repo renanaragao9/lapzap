@@ -12,13 +12,6 @@ from app.database.models.user import User
 from app.numbers.schemas import PhoneNumberInput
 
 
-async def is_phone_authorized(
-    phone_number: str,
-    session: AsyncSession,
-) -> bool:
-    return await get_active_phone_number(phone_number, session) is not None
-
-
 async def get_active_phone_number(
     phone_number: str,
     session: AsyncSession,
