@@ -9,6 +9,10 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.security import create_access_token, hash_password
 from app.database.base import Base
+from app.database.models.business import Business
+from app.database.models.business_hours import (
+    BusinessHours,  # noqa: F401 (register mapping)
+)
 from app.database.models.message_log import MessageLog  # noqa: F401 (register mapping)
 from app.database.models.phone_number import (
     PhoneNumber,  # noqa: F401 (register mapping)
@@ -68,6 +72,29 @@ async def create_user(
 
 def auth_headers(user_id: int) -> dict[str, str]:
     return {"Authorization": f"Bearer {create_access_token(user_id)}"}
+
+
+async def create_business(
+    evolution_instance_name: str,
+    user_id: int | None = None,
+    name: str = "Test Business",
+    business_type: str = "generico",
+    status: str = "active",
+) -> Business:
+    async with session_factory() as session:
+        business = Business(
+            user_id=user_id,
+            name=name,
+            business_type=business_type,
+            contact_phone_number="+5585999999999",
+            plan="starter",
+            status=status,
+            evolution_instance_name=evolution_instance_name,
+        )
+        session.add(business)
+        await session.commit()
+        await session.refresh(business)
+        return business
 
 
 async def request(method: str, url: str, **kwargs: Any) -> httpx.Response:

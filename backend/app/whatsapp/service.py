@@ -188,9 +188,16 @@ class WhatsAppService:
             logger.exception("Chatbot reply failed: sender=%s", sender)
             return
 
-        reply_data = await self.send_text(
-            sender, reply, business.evolution_instance_name
-        )
+        try:
+            reply_data = await self.send_text(
+                sender, reply, business.evolution_instance_name
+            )
+        except Exception:
+            # falha de rede/Evolution API não deve derrubar o webhook -
+            # Evolution não deveria receber 500 por causa disso
+            logger.exception("Send reply failed: sender=%s", sender)
+            return
+
         session.add(
             MessageLog(
                 business_id=business.id,

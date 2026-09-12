@@ -2,13 +2,11 @@ import asyncio
 import logging
 
 import httpx
+from conftest import create_business
 from pytest import LogCaptureFixture
 from sqlalchemy import select
 
-from app.core.security import hash_password
 from app.database.models.message_log import MessageLog
-from app.database.models.phone_number import PhoneNumber
-from app.database.models.user import User
 from app.database.session import get_session
 from app.main import app
 
@@ -79,41 +77,18 @@ async def _count_logged_messages() -> int:
     return 0
 
 
-async def _create_authorized_phone_number() -> int:
-    async for session in get_test_session():
-        user = User(
-            name="Webhook Owner",
-            email="webhook@example.com",
-            password_hash=hash_password("123456"),
-            is_active=True,
-        )
-        session.add(user)
-        await session.flush()
-        phone_number = PhoneNumber(
-            user_id=user.id,
-            name="Autorizado",
-            phone_number="+5585999999999",
-        )
-        session.add(phone_number)
-        await session.commit()
-        await session.refresh(phone_number)
-        return phone_number.id
-    raise AssertionError("no session yielded")
-
-
-def test_webhook_logs_and_blocks_unauthorized_sender() -> None:
+def test_webhook_ignored_when_no_business_for_instance() -> None:
+    # Nenhum Business com evolution_instance_name="lapzap-dev" cadastrado -
+    # webhook não sabe pra quem responder, ignora sem logar nada.
     response = asyncio.run(post_webhook(TEXT_MESSAGE_PAYLOAD))
     assert response.status_code == 200
-
-    logged = asyncio.run(_get_logged_message())
-    assert logged is not None
-    assert logged.blocked is True
-    assert logged.phone_number_id is None
-    assert logged.external_message_id == "BAE5F001"
+    assert asyncio.run(_count_logged_messages()) == 0
 
 
-def test_webhook_logs_authorized_sender_as_not_blocked() -> None:
-    asyncio.run(_create_authorized_phone_number())
+def test_webhook_logs_message_for_any_sender_when_business_active() -> None:
+    # Sem whitelist: qualquer número que mandar mensagem pro business ativo
+    # é logado e respondido (rate-limit é a única barreira agora).
+    business = asyncio.run(create_business(evolution_instance_name="lapzap-dev"))
 
     response = asyncio.run(post_webhook(TEXT_MESSAGE_PAYLOAD))
     assert response.status_code == 200
@@ -121,18 +96,23 @@ def test_webhook_logs_authorized_sender_as_not_blocked() -> None:
     logged = asyncio.run(_get_logged_message())
     assert logged is not None
     assert logged.blocked is False
-    assert logged.phone_number_id is not None
+    assert logged.business_id == business.id
+    assert logged.sender == "5585999999999"
+    assert logged.external_message_id == "BAE5F001"
 
 
-def test_webhook_blocks_authorized_sender_over_rate_limit() -> None:
+def test_webhook_blocks_sender_over_rate_limit() -> None:
     # RATE_LIMIT_PER_MINUTE=10 in .env: 10 prior inbound messages in the last
-    # minute trip the limit, so the 11th is blocked even though authorized.
-    async def seed_prior_messages(phone_number_id: int) -> None:
+    # minute trip the limit, so the 11th is blocked - mesmo sem whitelist.
+    business = asyncio.run(create_business(evolution_instance_name="lapzap-dev"))
+
+    async def seed_prior_messages() -> None:
         async for session in get_test_session():
             for i in range(10):
                 session.add(
                     MessageLog(
-                        phone_number_id=phone_number_id,
+                        business_id=business.id,
+                        sender="5585999999999",
                         external_message_id=f"seed-{i}",
                         message_type="TEXT",
                         direction="INBOUND",
@@ -143,8 +123,7 @@ def test_webhook_blocks_authorized_sender_over_rate_limit() -> None:
                 )
             await session.commit()
 
-    phone_number_id = asyncio.run(_create_authorized_phone_number())
-    asyncio.run(seed_prior_messages(phone_number_id))
+    asyncio.run(seed_prior_messages())
 
     response = asyncio.run(post_webhook(TEXT_MESSAGE_PAYLOAD))
     assert response.status_code == 200
@@ -152,10 +131,42 @@ def test_webhook_blocks_authorized_sender_over_rate_limit() -> None:
     logged = asyncio.run(_get_logged_message())
     assert logged is not None
     assert logged.blocked is True
-    assert logged.phone_number_id == phone_number_id
+    assert logged.business_id == business.id
+
+
+def test_webhook_does_not_rate_limit_across_different_senders() -> None:
+    business = asyncio.run(create_business(evolution_instance_name="lapzap-dev"))
+
+    async def seed_prior_messages_from_other_sender() -> None:
+        async for session in get_test_session():
+            for i in range(10):
+                session.add(
+                    MessageLog(
+                        business_id=business.id,
+                        sender="5585900000000",
+                        external_message_id=f"other-seed-{i}",
+                        message_type="TEXT",
+                        direction="INBOUND",
+                        payload={},
+                        processed=True,
+                        blocked=False,
+                    )
+                )
+            await session.commit()
+
+    asyncio.run(seed_prior_messages_from_other_sender())
+
+    response = asyncio.run(post_webhook(TEXT_MESSAGE_PAYLOAD))
+    assert response.status_code == 200
+
+    logged = asyncio.run(_get_logged_message())
+    assert logged is not None
+    assert logged.blocked is False
 
 
 def test_webhook_skips_persisting_message_without_id() -> None:
+    asyncio.run(create_business(evolution_instance_name="lapzap-dev"))
+
     payload = {
         "event": "messages.upsert",
         "instance": "lapzap-dev",

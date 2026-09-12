@@ -54,11 +54,8 @@ async def activate(
     _current_admin: CurrentAdmin,
     session: Session,
 ) -> Business:
-    """Admin liga o negócio a uma instância Evolution já criada/conectada
-    manualmente (QR escaneado) e marca como "active" - só a partir daqui o
-    webhook passa a responder mensagens dessa instância.
-    """
     business = await session.get(Business, business_id)
+
     if business is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Negócio não encontrado.")
 
