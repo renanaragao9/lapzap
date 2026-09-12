@@ -20,15 +20,21 @@ async function update(payload: { name: string; phone_number: string }) {
 </script>
 
 <template>
-  <div>
-    <h1>Editar número</h1>
-    <p v-if="error" class="error">Número não encontrado.</p>
-    <PhoneNumberForm
-      v-else-if="phoneNumber"
-      submit-label="Salvar"
-      :initial-name="phoneNumber.name"
-      :initial-phone-number="phoneNumber.phone_number"
-      :on-submit="update"
-    />
-  </div>
+  <Card>
+    <CardHeader>
+      <CardTitle>Editar número</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p v-if="error" class="text-sm text-destructive">
+        Número não encontrado.
+      </p>
+      <PhoneNumberForm
+        v-else-if="phoneNumber"
+        submit-label="Salvar"
+        :initial-name="phoneNumber.name"
+        :initial-phone-number="phoneNumber.phone_number"
+        :on-submit="update"
+      />
+    </CardContent>
+  </Card>
 </template>

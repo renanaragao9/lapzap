@@ -8,8 +8,12 @@ async function create(payload: { name: string; phone_number: string }) {
 </script>
 
 <template>
-  <div>
-    <h1>Novo número</h1>
-    <PhoneNumberForm submit-label="Criar" :on-submit="create" />
-  </div>
+  <Card>
+    <CardHeader>
+      <CardTitle>Novo número</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <PhoneNumberForm submit-label="Criar" :on-submit="create" />
+    </CardContent>
+  </Card>
 </template>

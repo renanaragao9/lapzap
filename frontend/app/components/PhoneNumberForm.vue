@@ -25,14 +25,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit">
-    <div class="field">
-      <label for="name">Nome</label>
-      <input id="name" v-model="name" required maxlength="255" />
+  <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
+    <div class="flex flex-col gap-1.5">
+      <Label for="name">Nome</Label>
+      <Input id="name" v-model="name" required maxlength="255" />
     </div>
-    <div class="field">
-      <label for="phone_number">Número (formato +DDI DDD número)</label>
-      <input
+    <div class="flex flex-col gap-1.5">
+      <Label for="phone_number">Número (formato +DDI DDD número)</Label>
+      <Input
         id="phone_number"
         v-model="phoneNumber"
         required
@@ -40,9 +40,9 @@ async function handleSubmit() {
         pattern="^\+[1-9]\d{7,14}$"
       />
     </div>
-    <p v-if="error" class="error">{{ error }}</p>
-    <button type="submit" :disabled="loading">
+    <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+    <Button type="submit" :disabled="loading">
       {{ loading ? "Salvando..." : submitLabel }}
-    </button>
+    </Button>
   </form>
 </template>

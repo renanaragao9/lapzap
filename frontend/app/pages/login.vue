@@ -20,33 +20,39 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div style="max-width: 320px; margin: 4rem auto">
-    <h1>Entrar</h1>
-    <form @submit.prevent="handleSubmit">
-      <div class="field">
-        <label for="email">E-mail</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          autocomplete="username"
-        />
-      </div>
-      <div class="field">
-        <label for="password">Senha</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          autocomplete="current-password"
-        />
-      </div>
-      <p v-if="error" class="error">{{ error }}</p>
-      <button type="submit" :disabled="loading">
-        {{ loading ? "Entrando..." : "Entrar" }}
-      </button>
-    </form>
+  <div class="mx-auto mt-16 max-w-sm">
+    <Card>
+      <CardHeader>
+        <CardTitle>Entrar</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
+          <div class="flex flex-col gap-1.5">
+            <Label for="email">E-mail</Label>
+            <Input
+              id="email"
+              v-model="email"
+              type="email"
+              required
+              autocomplete="username"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="password">Senha</Label>
+            <Input
+              id="password"
+              v-model="password"
+              type="password"
+              required
+              autocomplete="current-password"
+            />
+          </div>
+          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+          <Button type="submit" :disabled="loading">
+            {{ loading ? "Entrando..." : "Entrar" }}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   </div>
 </template>

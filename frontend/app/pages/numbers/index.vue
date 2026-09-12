@@ -21,39 +21,47 @@ async function remove(id: number) {
 </script>
 
 <template>
-  <div>
-    <div
-      style="display: flex; justify-content: space-between; align-items: center"
-    >
-      <h1>Números autorizados</h1>
-      <NuxtLink to="/numbers/new" class="button">Novo número</NuxtLink>
-    </div>
+  <Card>
+    <CardHeader class="flex items-center justify-between">
+      <CardTitle>Números autorizados</CardTitle>
+      <Button as-child size="sm">
+        <NuxtLink to="/numbers/new">Novo número</NuxtLink>
+      </Button>
+    </CardHeader>
+    <CardContent>
+      <p v-if="error" class="text-sm text-destructive">
+        Não foi possível carregar os números.
+      </p>
 
-    <p v-if="error" class="error">Não foi possível carregar os números.</p>
+      <Table v-else-if="numbers?.length">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome</TableHead>
+            <TableHead>Número</TableHead>
+            <TableHead>Ativo</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="n in numbers" :key="n.id">
+            <TableCell>{{ n.name }}</TableCell>
+            <TableCell>{{ n.phone_number }}</TableCell>
+            <TableCell>{{ n.is_active ? "Sim" : "Não" }}</TableCell>
+            <TableCell class="flex justify-end gap-2">
+              <Button as-child variant="outline" size="sm">
+                <NuxtLink :to="`/numbers/${n.id}`">Editar</NuxtLink>
+              </Button>
+              <Button variant="destructive" size="sm" @click="remove(n.id)">
+                Remover
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
 
-    <table v-else-if="numbers?.length">
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>Número</th>
-          <th>Ativo</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="n in numbers" :key="n.id">
-          <td>{{ n.name }}</td>
-          <td>{{ n.phone_number }}</td>
-          <td>{{ n.is_active ? "Sim" : "Não" }}</td>
-          <td>
-            <NuxtLink :to="`/numbers/${n.id}`">Editar</NuxtLink>
-            &nbsp;
-            <button type="button" @click="remove(n.id)">Remover</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p v-else>Nenhum número cadastrado.</p>
-  </div>
+      <p v-else class="text-sm text-muted-foreground">
+        Nenhum número cadastrado.
+      </p>
+    </CardContent>
+  </Card>
 </template>
