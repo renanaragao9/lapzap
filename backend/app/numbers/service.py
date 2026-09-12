@@ -12,13 +12,27 @@ from app.database.models.user import User
 from app.numbers.schemas import PhoneNumberInput
 
 
+def _br_number_variants(phone_number: str) -> list[str]:
+    digits = phone_number.lstrip("+")
+    variants = {phone_number}
+
+    if digits.startswith("55") and len(digits) in (12, 13):
+        ddi, ddd, rest = digits[:2], digits[2:4], digits[4:]
+        if len(rest) == 8:
+            variants.add(f"+{ddi}{ddd}9{rest}")
+        elif len(rest) == 9 and rest[0] == "9":
+            variants.add(f"+{ddi}{ddd}{rest[1:]}")
+
+    return list(variants)
+
+
 async def get_active_phone_number(
     phone_number: str,
     session: AsyncSession,
 ) -> PhoneNumber | None:
     return await session.scalar(
         select(PhoneNumber).where(
-            PhoneNumber.phone_number == phone_number,
+            PhoneNumber.phone_number.in_(_br_number_variants(phone_number)),
             PhoneNumber.is_active.is_(True),
         ),
     )
