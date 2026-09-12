@@ -12,7 +12,7 @@ async function handleSubmit() {
   loading.value = true;
   try {
     await login(email.value, password.value);
-    await navigateTo("/numbers");
+    await navigateTo("/numeros");
   } catch {
     error.value = "E-mail ou senha inválidos.";
   } finally {

@@ -47,7 +47,7 @@ async function handleSubmit() {
         {{ loading ? "Salvando..." : submitLabel }}
       </Button>
       <Button as-child variant="outline" type="button">
-        <NuxtLink to="/numbers">Cancelar</NuxtLink>
+        <NuxtLink to="/numeros">Cancelar</NuxtLink>
       </Button>
     </div>
   </form>

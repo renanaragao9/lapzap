@@ -17,8 +17,6 @@ from app.database.models.user import User
 from app.database.session import get_session
 from app.main import app
 
-# Single shared in-memory connection: StaticPool keeps every session on the
-# same SQLite connection, otherwise each would get its own empty :memory: db.
 engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
     poolclass=StaticPool,
@@ -52,6 +50,7 @@ async def create_user(
     password: str = "123456",
     name: str = "Test User",
     is_active: bool = True,
+    is_admin: bool = False,
 ) -> User:
     async with session_factory() as session:
         user = User(
@@ -59,6 +58,7 @@ async def create_user(
             email=email,
             password_hash=hash_password(password),
             is_active=is_active,
+            is_admin=is_admin,
         )
         session.add(user)
         await session.commit()

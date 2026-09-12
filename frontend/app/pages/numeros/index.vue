@@ -56,7 +56,7 @@ async function confirmRemove(e: Event) {
         </p>
       </div>
       <Button as-child class="w-full sm:w-auto">
-        <NuxtLink to="/numbers/new">
+        <NuxtLink to="/numeros/novo">
           <Plus class="size-4" />
           Novo número
         </NuxtLink>
@@ -104,8 +104,8 @@ async function confirmRemove(e: Event) {
                 </TableCell>
                 <TableCell>
                   <div class="flex justify-end">
-                    <NumberRowActions
-                      :id="n.id"
+                    <RowActions
+                      :to="`/numeros/${n.id}`"
                       :removing="removingId === n.id"
                       @remove="askRemove(n)"
                     />
@@ -139,8 +139,8 @@ async function confirmRemove(e: Event) {
                 }}</span>
               </p>
             </div>
-            <NumberRowActions
-              :id="n.id"
+            <RowActions
+              :to="`/numeros/${n.id}`"
               :removing="removingId === n.id"
               @remove="askRemove(n)"
             />
@@ -161,7 +161,7 @@ async function confirmRemove(e: Event) {
           </p>
         </div>
         <Button as-child size="sm" class="mt-1">
-          <NuxtLink to="/numbers/new">
+          <NuxtLink to="/numeros/novo">
             <Plus class="size-4" />
             Novo número
           </NuxtLink>
@@ -169,12 +169,15 @@ async function confirmRemove(e: Event) {
       </div>
     </Card>
 
-    <DeleteNumberDialog
+    <ConfirmDeleteDialog
       v-model:open="dialogOpen"
-      :name="pendingDelete?.name"
-      :phone-number="pendingDelete?.phone_number"
+      title="Remover número?"
+      :subject="pendingDelete?.name"
       :loading="removingId !== null"
       @confirm="confirmRemove"
-    />
+    >
+      ({{ pendingDelete?.phone_number }}) deixa de poder enviar mensagens.
+      Essa ação não pode ser desfeita.
+    </ConfirmDeleteDialog>
   </div>
 </template>

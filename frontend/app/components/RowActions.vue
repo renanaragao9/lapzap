@@ -2,7 +2,7 @@
 import { Loader2, PencilLine, Trash2 } from "lucide-vue-next";
 
 defineProps<{
-  id: number;
+  to: string;
   removing: boolean;
 }>();
 defineEmits<{
@@ -13,7 +13,7 @@ defineEmits<{
 <template>
   <div class="flex shrink-0 gap-1">
     <Button as-child variant="ghost" size="icon-sm" title="Editar">
-      <NuxtLink :to="`/numbers/${id}`">
+      <NuxtLink :to="to">
         <PencilLine class="size-4" />
       </NuxtLink>
     </Button>

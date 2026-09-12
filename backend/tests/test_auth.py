@@ -1,6 +1,6 @@
 import asyncio
 
-from conftest import create_user, request
+from conftest import auth_headers, create_user, request
 
 
 def test_login_success() -> None:
@@ -86,5 +86,25 @@ def test_protected_route_requires_token() -> None:
         response = await request("GET", "/api/v1/numbers")
 
         assert response.status_code == 401
+
+    asyncio.run(scenario())
+
+
+def test_me_returns_current_user() -> None:
+    async def scenario() -> None:
+        user = await create_user(email="me@example.com", is_admin=True)
+
+        response = await request(
+            "GET",
+            "/api/v1/auth/me",
+            headers=auth_headers(user.id),
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["email"] == "me@example.com"
+        assert body["is_admin"] is True
+        assert "password" not in body
+        assert "password_hash" not in body
 
     asyncio.run(scenario())

@@ -3,8 +3,8 @@ import { Loader2 } from "lucide-vue-next";
 
 defineProps<{
   open: boolean;
-  name?: string;
-  phoneNumber?: string;
+  title: string;
+  subject?: string;
   loading: boolean;
 }>();
 defineEmits<{
@@ -17,11 +17,10 @@ defineEmits<{
   <AlertDialog :open="open" @update:open="$emit('update:open', $event)">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Remover número?</AlertDialogTitle>
+        <AlertDialogTitle>{{ title }}</AlertDialogTitle>
         <AlertDialogDescription>
-          <strong class="text-foreground">{{ name }}</strong>
-          ({{ phoneNumber }}) deixa de poder enviar mensagens. Essa ação não
-          pode ser desfeita.
+          <strong class="text-foreground">{{ subject }}</strong>
+          <slot />
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

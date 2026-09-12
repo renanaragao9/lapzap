@@ -32,6 +32,7 @@ async def seed_user_and_phone_numbers(
                 email=email,
                 password_hash=hash_password(password),
                 is_active=True,
+                is_admin=True,
             )
             session.add(user)
             await session.flush()

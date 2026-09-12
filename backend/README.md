@@ -149,6 +149,21 @@ Response
 Não há endpoint de criação de usuários nesta etapa; o primeiro usuário deve ser
 inserido previamente com senha gerada por `hash_password()`.
 
+## Administração de usuários
+
+`POST /api/v1/users` cria os demais usuários. Todas as rotas abaixo exigem um
+usuário com `is_admin=True` (o usuário do seed já nasce admin):
+
+- `POST /api/v1/users`
+- `GET /api/v1/users`
+- `GET /api/v1/users/{id}`
+- `PUT /api/v1/users/{id}`
+- `DELETE /api/v1/users/{id}`
+
+Quem não é admin recebe `403`. Um admin não pode remover a própria conta
+(`400`) nem remover um usuário que ainda tem números autorizados (`409`) —
+remova os números primeiro.
+
 ## Configuração da Evolution API
 
 Defina as variáveis no `.env`:

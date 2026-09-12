@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import { ArrowLeft, Plus } from "lucide-vue-next";
 
+definePageMeta({ middleware: "admin-only" });
+
 const api = useApi();
 
-async function create(payload: { name: string; phone_number: string }) {
-  await api("/numbers", { method: "POST", body: payload });
-  await navigateTo("/numbers");
+async function create(payload: {
+  name: string;
+  email: string;
+  password?: string;
+  is_active: boolean;
+  is_admin: boolean;
+}) {
+  await api("/users", { method: "POST", body: payload });
+  await navigateTo("/usuarios");
 }
 </script>
 
 <template>
   <div class="mx-auto flex max-w-md flex-col gap-4">
     <NuxtLink
-      to="/numbers"
+      to="/usuarios"
       class="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeft class="size-4" />
@@ -27,15 +35,16 @@ async function create(payload: { name: string; phone_number: string }) {
           <Plus class="size-4 text-foreground" />
         </div>
         <div>
-          <CardTitle>Novo número</CardTitle>
-          <CardDescription
-            >Autorize um número a enviar mensagens pelo
-            WhatsApp.</CardDescription
-          >
+          <CardTitle>Novo usuário</CardTitle>
+          <CardDescription>Cria um acesso ao sistema.</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
-        <PhoneNumberForm submit-label="Criar" :on-submit="create" />
+        <UserForm
+          submit-label="Criar"
+          require-password
+          :on-submit="create"
+        />
       </CardContent>
     </Card>
   </div>
