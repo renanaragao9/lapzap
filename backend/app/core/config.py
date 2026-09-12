@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     evolution_instance_name: str
 
     ollama_url: str = "http://localhost:11434"
-    ollama_model: str = "llava:7b"
+    ollama_model: str = "minicpm-v"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
