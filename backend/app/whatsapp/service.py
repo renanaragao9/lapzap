@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.database.models.message_log import MessageLog
+from app.llm.chat_service import ask
 from app.numbers.service import get_active_phone_number, is_rate_limited
 from app.whatsapp.schemas import BroadcastResult, EvolutionWebhookPayload
 
@@ -77,6 +78,12 @@ class WhatsAppService:
         data = payload.data or {}
         raw_key = data.get("key")
         key: dict[str, Any] = raw_key if isinstance(raw_key, dict) else {}
+
+        if key.get("fromMe"):
+            # mensagem que o próprio bot mandou, ecoada de volta pelo webhook -
+            # ignora, senão ele responde a si mesmo em loop
+            return
+
         raw_message = data.get("message")
         message: dict[str, Any] = raw_message if isinstance(raw_message, dict) else {}
         remote_jid = key.get("remoteJid") or key.get("remoteJidAlt")
@@ -123,6 +130,35 @@ class WhatsAppService:
             rate_limited,
             blocked,
         )
+
+        if blocked:
+            return
+
+        image_message = message.get("imageMessage")
+        image_base64 = message.get("base64") if isinstance(image_message, dict) else None
+        text = self.get_text(message) or (
+            image_message.get("caption") if isinstance(image_message, dict) else None
+        )
+
+        try:
+            reply = await ask(text, image_base64)
+        except Exception:  # noqa: BLE001 - falha na IA não deve derrubar o webhook
+            logger.exception("Chatbot reply failed: sender=%s", sender)
+            return
+
+        reply_data = await self.send_text(sender, reply)
+        session.add(
+            MessageLog(
+                phone_number_id=phone_number.id if phone_number else None,
+                external_message_id=reply_data.get("key", {}).get("id") or str(uuid4()),
+                message_type="TEXT",
+                direction="OUTBOUND",
+                payload=reply_data,
+                processed=True,
+                blocked=False,
+            )
+        )
+        await session.commit()
 
     @staticmethod
     def is_message_event(payload: EvolutionWebhookPayload) -> bool:
