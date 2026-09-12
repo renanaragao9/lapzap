@@ -84,6 +84,13 @@ async function handleSubmit() {
               {{ loading ? "Entrando..." : "Entrar" }}
             </Button>
           </form>
+
+          <p class="mt-4 text-center text-sm text-muted-foreground">
+            Ainda não tem conta?
+            <NuxtLink to="/cadastro" class="text-primary hover:underline"
+              >Cadastre seu negócio</NuxtLink
+            >
+          </p>
         </CardContent>
       </Card>
     </div>

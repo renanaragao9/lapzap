@@ -1,5 +1,5 @@
 export default defineNuxtRouteMiddleware((to) => {
-  if (to.path === "/login") return;
+  if (to.path === "/login" || to.path === "/cadastro") return;
 
   const { token } = useAuth();
   if (!token.value) {
