@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 
 if TYPE_CHECKING:
+    from app.database.models.business import Business
     from app.database.models.phone_number import PhoneNumber
 
 
@@ -26,6 +27,14 @@ class MessageLog(Base):
         index=True,
         nullable=True,
     )
+    business_id: Mapped[int | None] = mapped_column(
+        ForeignKey("businesses.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    # número de quem mandou (INBOUND) - usado pro rate-limit sem whitelist,
+    # já que o bot agora responde qualquer cliente, não só número cadastrado
+    sender: Mapped[str | None] = mapped_column(String(20), nullable=True)
     external_message_id: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -37,3 +46,4 @@ class MessageLog(Base):
         "PhoneNumber",
         back_populates="message_logs"
     )
+    business: Mapped["Business | None"] = relationship("Business")

@@ -3,8 +3,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database.models.business import Business
 from app.database.models.message_log import MessageLog
-from app.database.models.phone_number import PhoneNumber
 from app.database.models.user import User
 from app.messages.schemas import MessageLogResponse
 from app.whatsapp.service import WhatsAppService
@@ -23,9 +23,9 @@ async def list_messages(
     limit: int = 50,
 ) -> list[MessageLogResponse]:
     result = await session.execute(
-        select(MessageLog, PhoneNumber.phone_number)
-        .join(PhoneNumber, MessageLog.phone_number_id == PhoneNumber.id)
-        .where(PhoneNumber.user_id == current_user.id)
+        select(MessageLog, Business.name)
+        .join(Business, MessageLog.business_id == Business.id)
+        .where(Business.user_id == current_user.id)
         .order_by(MessageLog.created_at.desc())
         .limit(limit),
     )
@@ -33,7 +33,8 @@ async def list_messages(
     return [
         MessageLogResponse(
             id=log.id,
-            phone_number=phone_number,
+            phone_number=log.sender,
+            business_name=business_name,
             message_type=log.message_type,
             direction=log.direction,
             text=WhatsAppService.get_text(_message_dict(log.payload)),
@@ -41,5 +42,5 @@ async def list_messages(
             blocked=log.blocked,
             created_at=log.created_at,
         )
-        for log, phone_number in result.all()
+        for log, business_name in result.all()
     ]

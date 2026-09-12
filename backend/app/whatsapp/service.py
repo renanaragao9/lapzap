@@ -8,10 +8,14 @@ from uuid import uuid4
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.business.service import (
+    build_system_prompt,
+    get_business_by_instance,
+    is_rate_limited,
+)
 from app.core.config import settings
 from app.database.models.message_log import MessageLog
 from app.llm.chat_service import ask
-from app.numbers.service import get_active_phone_number, is_rate_limited
 from app.whatsapp.media_storage import save_image
 from app.whatsapp.schemas import BroadcastResult, EvolutionWebhookPayload
 
@@ -21,11 +25,6 @@ logger = logging.getLogger(__name__)
 def _sanitize_for_log(
     raw_payload: dict[str, Any], media_path: str | None
 ) -> dict[str, Any]:
-    """Troca o base64 da imagem pelo caminho onde ela foi salva em disco antes
-    de persistir - o payload inteiro fica gigante (centenas de KB) e estoura o
-    sort_buffer do MySQL ao listar mensagens (ORDER BY + JOIN faz filesort da
-    linha inteira). A imagem em si não se perde, só sai do banco.
-    """
     payload = json.loads(json.dumps(raw_payload))  # deep copy simples
     message = payload.get("data", {}).get("message")
     if isinstance(message, dict) and "base64" in message:
@@ -37,11 +36,13 @@ def _sanitize_for_log(
 
 
 class WhatsAppService:
-    async def send_text(self, number: str, text: str) -> dict[str, Any]:
+    async def send_text(
+        self, number: str, text: str, instance_name: str | None = None
+    ) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 f"{settings.evolution_api_url}/message/sendText/"
-                f"{settings.evolution_instance_name}",
+                f"{instance_name or settings.evolution_instance_name}",
                 headers={"apikey": settings.evolution_api_key},
                 json={"number": number, "text": text},
             )
@@ -104,6 +105,15 @@ class WhatsAppService:
             # ignora, senão ele responde a si mesmo em loop
             return
 
+        instance_name = payload.instance or data.get("instance")
+        business = await get_business_by_instance(instance_name, session)
+        if business is None:
+            logger.warning(
+                "Evolution webhook: nenhum negócio ativo pra instância=%s",
+                instance_name,
+            )
+            return
+
         raw_message = data.get("message")
         message: dict[str, Any] = raw_message if isinstance(raw_message, dict) else {}
         remote_jid = key.get("remoteJid") or key.get("remoteJidAlt")
@@ -112,8 +122,8 @@ class WhatsAppService:
         message_id = key.get("id") or data.get("id")
 
         logger.info(
-            "Evolution message event: instance=%s sender=%s type=%s text=%s message_id=%s",
-            payload.instance or data.get("instance"),
+            "Evolution message event: business=%s sender=%s type=%s text=%s message_id=%s",
+            business.name,
             sender,
             message_type,
             self.get_text(message),
@@ -123,12 +133,8 @@ class WhatsAppService:
         if sender is None or not isinstance(message_id, str):
             return
 
-        phone_number = await get_active_phone_number(f"+{sender}", session)
-        authorized = phone_number is not None
-        rate_limited = (
-            await is_rate_limited(phone_number.id, session) if phone_number else False
-        )
-        blocked = not authorized or rate_limited
+        # sem whitelist: qualquer número pode mandar, só rate-limit protege
+        blocked = await is_rate_limited(business.id, sender, session)
 
         image_message = message.get("imageMessage")
         image_base64 = (
@@ -145,14 +151,15 @@ class WhatsAppService:
                     if isinstance(image_message, dict)
                     else None,
                 )
-            except Exception:  #  falha ao salvar não deve travar o webhook
+            except Exception:  # noqa: BLE001 - falha ao salvar não deve travar o webhook
                 logger.exception(
                     "Failed to save image to disk: message_id=%s", message_id
                 )
 
         session.add(
             MessageLog(
-                phone_number_id=phone_number.id if phone_number else None,
+                business_id=business.id,
+                sender=sender,
                 external_message_id=message_id,
                 message_type=message_type or "UNKNOWN",
                 direction="INBOUND",
@@ -164,11 +171,7 @@ class WhatsAppService:
         await session.commit()
 
         logger.info(
-            "Evolution sender authorization: sender=%s authorized=%s rate_limited=%s blocked=%s",
-            sender,
-            authorized,
-            rate_limited,
-            blocked,
+            "Evolution rate limit check: sender=%s blocked=%s", sender, blocked
         )
 
         if blocked:
@@ -179,15 +182,19 @@ class WhatsAppService:
         )
 
         try:
-            reply = await ask(text, image_base64)
-        except Exception:  # falha na IA não deve derrubar o webhook
+            system_prompt = await build_system_prompt(business, session)
+            reply = await ask(system_prompt, text, image_base64)
+        except Exception:  # noqa: BLE001 - falha na IA não deve derrubar o webhook
             logger.exception("Chatbot reply failed: sender=%s", sender)
             return
 
-        reply_data = await self.send_text(sender, reply)
+        reply_data = await self.send_text(
+            sender, reply, business.evolution_instance_name
+        )
         session.add(
             MessageLog(
-                phone_number_id=phone_number.id if phone_number else None,
+                business_id=business.id,
+                sender=sender,
                 external_message_id=reply_data.get("key", {}).get("id") or str(uuid4()),
                 message_type="TEXT",
                 direction="OUTBOUND",
