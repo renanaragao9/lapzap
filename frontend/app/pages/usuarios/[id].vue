@@ -21,6 +21,7 @@ async function update(payload: {
   is_admin: boolean;
 }) {
   await api(`/users/${id}`, { method: "PUT", body: payload });
+  toast.success("Usuário atualizado.");
   await navigateTo("/usuarios");
 }
 </script>

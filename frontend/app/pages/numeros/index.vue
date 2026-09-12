@@ -26,7 +26,7 @@ function askRemove(n: PhoneNumber) {
 }
 
 async function confirmRemove(e: Event) {
-  e.preventDefault(); // keep the dialog open until the request finishes
+  e.preventDefault();
   const target = pendingDelete.value;
   if (!target) return;
   removingId.value = target.id;
@@ -34,6 +34,9 @@ async function confirmRemove(e: Event) {
     await api(`/numbers/${target.id}`, { method: "DELETE" });
     dialogOpen.value = false;
     await refresh();
+    toast.success("Número removido.");
+  } catch (err: any) {
+    toast.error(err?.data?.detail ?? "Não foi possível remover o número.");
   } finally {
     removingId.value = null;
   }
@@ -42,7 +45,9 @@ async function confirmRemove(e: Event) {
 
 <template>
   <div class="flex flex-col gap-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+    >
       <div>
         <h1 class="text-2xl font-semibold tracking-tight">
           Números autorizados
@@ -73,7 +78,6 @@ async function confirmRemove(e: Event) {
       </p>
 
       <template v-else-if="numbers?.length">
-        <!-- table: sm and up -->
         <div class="hidden sm:block">
           <Table>
             <TableHeader>
@@ -116,7 +120,6 @@ async function confirmRemove(e: Event) {
           </Table>
         </div>
 
-        <!-- cards: below sm -->
         <div class="divide-y sm:hidden">
           <div
             v-for="n in numbers"
@@ -176,8 +179,8 @@ async function confirmRemove(e: Event) {
       :loading="removingId !== null"
       @confirm="confirmRemove"
     >
-      ({{ pendingDelete?.phone_number }}) deixa de poder enviar mensagens.
-      Essa ação não pode ser desfeita.
+      ({{ pendingDelete?.phone_number }}) deixa de poder enviar mensagens. Essa
+      ação não pode ser desfeita.
     </ConfirmDeleteDialog>
   </div>
 </template>

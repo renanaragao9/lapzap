@@ -22,7 +22,7 @@ function askRemove(u: AppUser) {
 }
 
 async function confirmRemove(e: Event) {
-  e.preventDefault(); // keep the dialog open until the request finishes
+  e.preventDefault();
   const target = pendingDelete.value;
   if (!target) return;
   removingId.value = target.id;
@@ -30,6 +30,9 @@ async function confirmRemove(e: Event) {
     await api(`/users/${target.id}`, { method: "DELETE" });
     dialogOpen.value = false;
     await refresh();
+    toast.success("Usuário removido.");
+  } catch (err: any) {
+    toast.error(err?.data?.detail ?? "Não foi possível remover o usuário.");
   } finally {
     removingId.value = null;
   }
@@ -69,7 +72,6 @@ async function confirmRemove(e: Event) {
       </p>
 
       <template v-else-if="users?.length">
-        <!-- table: sm and up -->
         <div class="hidden sm:block">
           <Table>
             <TableHeader>
@@ -108,7 +110,6 @@ async function confirmRemove(e: Event) {
           </Table>
         </div>
 
-        <!-- cards: below sm -->
         <div class="divide-y sm:hidden">
           <div
             v-for="u in users"
@@ -164,8 +165,8 @@ async function confirmRemove(e: Event) {
       :loading="removingId !== null"
       @confirm="confirmRemove"
     >
-      ({{ pendingDelete?.email }}) perde acesso ao sistema. Essa ação não
-      pode ser desfeita.
+      ({{ pendingDelete?.email }}) perde acesso ao sistema. Essa ação não pode
+      ser desfeita.
     </ConfirmDeleteDialog>
   </div>
 </template>

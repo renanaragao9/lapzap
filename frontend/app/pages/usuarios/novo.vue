@@ -13,6 +13,7 @@ async function create(payload: {
   is_admin: boolean;
 }) {
   await api("/users", { method: "POST", body: payload });
+  toast.success("Usuário criado.");
   await navigateTo("/usuarios");
 }
 </script>

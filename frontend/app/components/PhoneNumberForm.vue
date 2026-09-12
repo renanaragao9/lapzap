@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 const props = defineProps<{
   initialName?: string;
   initialPhoneNumber?: string;
@@ -25,6 +26,7 @@ async function handleSubmit() {
     });
   } catch (err: any) {
     error.value = err?.data?.detail ?? "Não foi possível salvar.";
+    toast.error(error.value);
   } finally {
     loading.value = false;
   }

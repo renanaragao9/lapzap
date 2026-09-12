@@ -15,10 +15,13 @@ const {
   data: phoneNumber,
   pending,
   error,
-} = await useAsyncData(`number-${id}`, () => api<PhoneNumber>(`/numbers/${id}`));
+} = await useAsyncData(`number-${id}`, () =>
+  api<PhoneNumber>(`/numbers/${id}`),
+);
 
 async function update(payload: { name: string; phone_number: string }) {
   await api(`/numbers/${id}`, { method: "PUT", body: payload });
+  toast.success("Número atualizado.");
   await navigateTo("/numeros");
 }
 </script>
@@ -39,9 +42,7 @@ async function update(payload: { name: string; phone_number: string }) {
       </div>
 
       <template v-else-if="error">
-        <CardContent
-          class="flex flex-col items-center gap-3 py-10 text-center"
-        >
+        <CardContent class="flex flex-col items-center gap-3 py-10 text-center">
           <div
             class="flex size-10 items-center justify-center rounded-full bg-muted"
           >

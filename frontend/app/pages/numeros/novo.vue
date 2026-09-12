@@ -5,6 +5,7 @@ const api = useApi();
 
 async function create(payload: { name: string; phone_number: string }) {
   await api("/numbers", { method: "POST", body: payload });
+  toast.success("Número criado.");
   await navigateTo("/numeros");
 }
 </script>
