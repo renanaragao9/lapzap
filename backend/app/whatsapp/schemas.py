@@ -13,3 +13,15 @@ class EvolutionWebhookPayload(BaseModel):
 
 class WebhookResponse(BaseModel):
     status: str = "ok"
+
+
+class BroadcastRequest(BaseModel):
+    numbers: list[str]
+    text: str
+    delay_seconds: float = 2.0
+
+
+class BroadcastResult(BaseModel):
+    number: str
+    status: str
+    detail: str | None = None

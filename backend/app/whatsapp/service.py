@@ -1,16 +1,67 @@
+import asyncio
 import logging
+import random
 from typing import Any
+from uuid import uuid4
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.database.models.message_log import MessageLog
 from app.numbers.service import get_active_phone_number, is_rate_limited
-from app.whatsapp.schemas import EvolutionWebhookPayload
+from app.whatsapp.schemas import BroadcastResult, EvolutionWebhookPayload
 
 logger = logging.getLogger(__name__)
 
 
 class WhatsAppService:
+    async def send_text(self, number: str, text: str) -> dict[str, Any]:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                f"{settings.evolution_api_url}/message/sendText/"
+                f"{settings.evolution_instance_name}",
+                headers={"apikey": settings.evolution_api_key},
+                json={"number": number, "text": text},
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def broadcast(
+        self,
+        numbers: list[str],
+        text: str,
+        session: AsyncSession,
+        delay_seconds: float = 2.0,
+    ) -> list[BroadcastResult]:
+        results: list[BroadcastResult] = []
+
+        for number in numbers:
+            try:
+                data = await self.send_text(number, text)
+                message_id = data.get("key", {}).get("id") or str(uuid4())
+                session.add(
+                    MessageLog(
+                        external_message_id=message_id,
+                        message_type="TEXT",
+                        direction="OUTBOUND",
+                        payload=data,
+                        processed=True,
+                        blocked=False,
+                    )
+                )
+                results.append(BroadcastResult(number=number, status="sent"))
+            except Exception as exc:  # - reporta erro por número, segue o lote
+                logger.exception("Broadcast send failed: number=%s", number)
+                results.append(
+                    BroadcastResult(number=number, status="error", detail=str(exc))
+                )
+
+            await asyncio.sleep(delay_seconds + random.uniform(0, 1))
+
+        await session.commit()
+        return results
+
     async def process_webhook(
         self,
         payload: EvolutionWebhookPayload,
