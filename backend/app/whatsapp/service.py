@@ -151,7 +151,7 @@ class WhatsAppService:
                     if isinstance(image_message, dict)
                     else None,
                 )
-            except Exception:  # noqa: BLE001 - falha ao salvar não deve travar o webhook
+            except Exception:
                 logger.exception(
                     "Failed to save image to disk: message_id=%s", message_id
                 )
@@ -184,7 +184,7 @@ class WhatsAppService:
         try:
             system_prompt = await build_system_prompt(business, session)
             reply = await ask(system_prompt, text, image_base64)
-        except Exception:  # noqa: BLE001 - falha na IA não deve derrubar o webhook
+        except Exception:
             logger.exception("Chatbot reply failed: sender=%s", sender)
             return
 

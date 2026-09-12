@@ -75,9 +75,11 @@ def _format_hours(hours: list[BusinessHours]) -> str:
 async def build_system_prompt(business: Business, session: AsyncSession) -> str:
     parts = [
         f"Você é o assistente de atendimento da {business.name}.",
-        "Responda só sobre esse negócio, se não souber a resposta ou for "
-        "assunto fora do escopo, diga que vai encaminhar pra um atendente "
-        "humano - não invente informação.",
+        (
+            "Responda só sobre esse negócio, se não souber a resposta ou for "
+            "assunto fora do escopo, diga que vai encaminhar pra um atendente "
+            "humano - não invente informação."
+        ),
     ]
 
     if business.business_type == "barbearia":

@@ -11,10 +11,6 @@ if TYPE_CHECKING:
 
 
 class BusinessHours(Base):
-    """Horário de funcionamento por dia da semana - dado dinâmico do
-    vertical "barbearia" (agenda/horário), consultado na hora de responder.
-    """
-
     __tablename__ = "business_hours"
 
     id: Mapped[int] = mapped_column(primary_key=True)

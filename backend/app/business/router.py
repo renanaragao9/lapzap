@@ -20,7 +20,9 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentAdmin = Annotated[User, Depends(get_current_admin)]
 
 
-@router.post("/signup", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/signup", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED
+)
 async def signup(data: BusinessSignupRequest, session: Session) -> Business:
     business = Business(
         name=data.name,
@@ -36,8 +38,12 @@ async def signup(data: BusinessSignupRequest, session: Session) -> Business:
 
 
 @router.get("", response_model=list[BusinessResponse])
-async def list_pending(_current_admin: CurrentAdmin, session: Session) -> list[Business]:
-    result = await session.scalars(select(Business).order_by(Business.created_at.desc()))
+async def list_pending(
+    _current_admin: CurrentAdmin, session: Session
+) -> list[Business]:
+    result = await session.scalars(
+        select(Business).order_by(Business.created_at.desc())
+    )
     return list(result)
 
 
