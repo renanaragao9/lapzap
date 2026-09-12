@@ -17,3 +17,6 @@ __pycache__/
 
 # Arquivos de sistema
 .tmp/
+
+# Imagens recebidas via WhatsApp (salvas por app/whatsapp/media_storage.py)
+media/

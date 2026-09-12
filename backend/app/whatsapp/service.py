@@ -12,21 +12,27 @@ from app.core.config import settings
 from app.database.models.message_log import MessageLog
 from app.llm.chat_service import ask
 from app.numbers.service import get_active_phone_number, is_rate_limited
+from app.whatsapp.media_storage import save_image
 from app.whatsapp.schemas import BroadcastResult, EvolutionWebhookPayload
 
 logger = logging.getLogger(__name__)
 
 
-def _sanitize_for_log(raw_payload: dict[str, Any]) -> dict[str, Any]:
-    """Remove o base64 da imagem antes de persistir - o payload inteiro fica
-    gigante (centenas de KB) e estoura o sort_buffer do MySQL ao listar
-    mensagens (ORDER BY + JOIN faz filesort da linha inteira). Já processamos
-    a imagem em memória na hora, não precisa manter o base64 salvo depois.
+def _sanitize_for_log(
+    raw_payload: dict[str, Any], media_path: str | None
+) -> dict[str, Any]:
+    """Troca o base64 da imagem pelo caminho onde ela foi salva em disco antes
+    de persistir - o payload inteiro fica gigante (centenas de KB) e estoura o
+    sort_buffer do MySQL ao listar mensagens (ORDER BY + JOIN faz filesort da
+    linha inteira). A imagem em si não se perde, só sai do banco.
     """
     payload = json.loads(json.dumps(raw_payload))  # deep copy simples
     message = payload.get("data", {}).get("message")
     if isinstance(message, dict) and "base64" in message:
-        message["base64"] = f"<omitido, {len(message['base64'])} chars>"
+        message["base64"] = (
+            f"<salvo em {media_path}>" if media_path else "<falha ao salvar>"
+        )
+
     return payload
 
 
@@ -124,13 +130,33 @@ class WhatsAppService:
         )
         blocked = not authorized or rate_limited
 
+        image_message = message.get("imageMessage")
+        image_base64 = (
+            message.get("base64") if isinstance(image_message, dict) else None
+        )
+
+        media_path = None
+        if image_base64:
+            try:
+                media_path = save_image(
+                    message_id,
+                    image_base64,
+                    image_message.get("mimetype")
+                    if isinstance(image_message, dict)
+                    else None,
+                )
+            except Exception:  #  falha ao salvar não deve travar o webhook
+                logger.exception(
+                    "Failed to save image to disk: message_id=%s", message_id
+                )
+
         session.add(
             MessageLog(
                 phone_number_id=phone_number.id if phone_number else None,
                 external_message_id=message_id,
                 message_type=message_type or "UNKNOWN",
                 direction="INBOUND",
-                payload=_sanitize_for_log(raw_payload),
+                payload=_sanitize_for_log(raw_payload, media_path),
                 processed=False,
                 blocked=blocked,
             )
@@ -148,15 +174,13 @@ class WhatsAppService:
         if blocked:
             return
 
-        image_message = message.get("imageMessage")
-        image_base64 = message.get("base64") if isinstance(image_message, dict) else None
         text = self.get_text(message) or (
             image_message.get("caption") if isinstance(image_message, dict) else None
         )
 
         try:
             reply = await ask(text, image_base64)
-        except Exception:  # noqa: BLE001 - falha na IA não deve derrubar o webhook
+        except Exception:  # falha na IA não deve derrubar o webhook
             logger.exception("Chatbot reply failed: sender=%s", sender)
             return
 
