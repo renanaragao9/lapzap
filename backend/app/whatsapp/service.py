@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import random
 from typing import Any
@@ -14,6 +15,19 @@ from app.numbers.service import get_active_phone_number, is_rate_limited
 from app.whatsapp.schemas import BroadcastResult, EvolutionWebhookPayload
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_for_log(raw_payload: dict[str, Any]) -> dict[str, Any]:
+    """Remove o base64 da imagem antes de persistir - o payload inteiro fica
+    gigante (centenas de KB) e estoura o sort_buffer do MySQL ao listar
+    mensagens (ORDER BY + JOIN faz filesort da linha inteira). Já processamos
+    a imagem em memória na hora, não precisa manter o base64 salvo depois.
+    """
+    payload = json.loads(json.dumps(raw_payload))  # deep copy simples
+    message = payload.get("data", {}).get("message")
+    if isinstance(message, dict) and "base64" in message:
+        message["base64"] = f"<omitido, {len(message['base64'])} chars>"
+    return payload
 
 
 class WhatsAppService:
@@ -116,7 +130,7 @@ class WhatsAppService:
                 external_message_id=message_id,
                 message_type=message_type or "UNKNOWN",
                 direction="INBOUND",
-                payload=raw_payload,
+                payload=_sanitize_for_log(raw_payload),
                 processed=False,
                 blocked=blocked,
             )
