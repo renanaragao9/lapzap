@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.service import get_current_user
@@ -31,8 +31,9 @@ async def create_phone_number(
 async def list_phone_numbers(
     current_user: CurrentUser,
     session: Session,
+    business_id: Annotated[int, Query()],
 ) -> list[PhoneNumber]:
-    return await service.list_phone_numbers(current_user, session)
+    return await service.list_phone_numbers(business_id, current_user, session)
 
 
 @router.get("/{phone_number_id}", response_model=PhoneNumberResponse)

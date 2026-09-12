@@ -86,6 +86,95 @@ def test_activate_sets_instance_and_status() -> None:
     asyncio.run(scenario())
 
 
+def test_set_visibility_by_owner() -> None:
+    async def scenario() -> None:
+        owner = await create_user(email="visibility-owner@example.com")
+        business = await create_business(
+            evolution_instance_name="biz-visibility-owner", user_id=owner.id
+        )
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/visibility",
+            json={"visibility": "private"},
+            headers=auth_headers(owner.id),
+        )
+        assert response.status_code == 200
+        assert response.json()["visibility"] == "private"
+
+    asyncio.run(scenario())
+
+
+def test_set_visibility_by_admin() -> None:
+    async def scenario() -> None:
+        admin = await create_user(email="visibility-admin@example.com", is_admin=True)
+        business = await create_business(evolution_instance_name="biz-visibility-admin")
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/visibility",
+            json={"visibility": "private"},
+            headers=auth_headers(admin.id),
+        )
+        assert response.status_code == 200
+
+    asyncio.run(scenario())
+
+
+def test_set_visibility_rejects_other_user() -> None:
+    async def scenario() -> None:
+        owner = await create_user(email="visibility-real-owner@example.com")
+        intruder = await create_user(email="visibility-intruder@example.com")
+        business = await create_business(
+            evolution_instance_name="biz-visibility-guard", user_id=owner.id
+        )
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/visibility",
+            json={"visibility": "private"},
+            headers=auth_headers(intruder.id),
+        )
+        assert response.status_code == 403
+
+    asyncio.run(scenario())
+
+
+def test_set_visibility_rejects_invalid_value() -> None:
+    async def scenario() -> None:
+        owner = await create_user(email="visibility-invalid@example.com")
+        business = await create_business(
+            evolution_instance_name="biz-visibility-invalid", user_id=owner.id
+        )
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/visibility",
+            json={"visibility": "invisible"},
+            headers=auth_headers(owner.id),
+        )
+        assert response.status_code == 422
+
+    asyncio.run(scenario())
+
+
+def test_list_mine_scoped_to_current_user() -> None:
+    async def scenario() -> None:
+        owner = await create_user(email="mine-owner@example.com")
+        other = await create_user(email="mine-other@example.com")
+        await create_business(evolution_instance_name="biz-mine-a", user_id=owner.id)
+        await create_business(evolution_instance_name="biz-mine-b", user_id=other.id)
+
+        response = await request(
+            "GET", "/api/v1/businesses/mine", headers=auth_headers(owner.id)
+        )
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+        assert response.json()[0]["evolution_instance_name"] == "biz-mine-a"
+
+    asyncio.run(scenario())
+
+
 def test_activate_missing_business_returns_404() -> None:
     async def scenario() -> None:
         admin = await create_user(email="admin3@example.com", is_admin=True)

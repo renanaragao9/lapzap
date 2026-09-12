@@ -1,6 +1,6 @@
 import asyncio
 
-from conftest import auth_headers, create_user, request
+from conftest import auth_headers, create_business, create_user, request
 
 NEW_USER_PAYLOAD = {
     "name": "Novo Usuário",
@@ -105,12 +105,19 @@ def test_admin_cannot_delete_user_with_numbers() -> None:
     async def scenario() -> None:
         admin = await create_user(email="admin4@example.com", is_admin=True)
         other = await create_user(email="withnumber@example.com")
+        business = await create_business(
+            evolution_instance_name="biz-user-delete-guard", user_id=other.id
+        )
         headers = auth_headers(admin.id)
 
         await request(
             "POST",
             "/api/v1/numbers",
-            json={"phone_number": "+5585999999999", "name": "Número"},
+            json={
+                "phone_number": "+5585999999999",
+                "name": "Número",
+                "business_id": business.id,
+            },
             headers=auth_headers(other.id),
         )
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Loader2, Phone, Plus } from "lucide-vue-next";
+import type { Business } from "~/types/business";
 
 interface PhoneNumber {
   id: number;
@@ -8,13 +9,36 @@ interface PhoneNumber {
   is_active: boolean;
 }
 
+const route = useRoute();
 const api = useApi();
+
+// não tem seletor de negócio ainda (1 negócio por conta é o caso comum) -
+// usa o business_id da URL, ou o primeiro negócio do usuário.
+const { data: myBusinesses } = await useAsyncData("my-businesses", () =>
+  api<Business[]>("/businesses/mine"),
+);
+
+const businessId = computed(() => {
+  const fromQuery = Number(route.query.business_id);
+  if (fromQuery) return fromQuery;
+  return myBusinesses.value?.[0]?.id ?? null;
+});
+
 const {
   data: numbers,
   pending,
   refresh,
   error,
-} = await useAsyncData("numbers", () => api<PhoneNumber[]>("/numbers"));
+} = await useAsyncData(
+  "numbers",
+  () =>
+    businessId.value
+      ? api<PhoneNumber[]>("/numbers", {
+          params: { business_id: businessId.value },
+        })
+      : Promise.resolve([]),
+  { watch: [businessId] },
+);
 
 const removingId = ref<number | null>(null);
 const dialogOpen = ref(false);
@@ -56,19 +80,27 @@ async function confirmRemove(e: Event) {
           {{
             numbers?.length
               ? `${numbers.length} número${numbers.length > 1 ? "s" : ""} cadastrado${numbers.length > 1 ? "s" : ""}`
-              : "Gerencie quem pode enviar mensagens pro WhatsApp"
+              : "Só importa quando o negócio está marcado como privado"
           }}
         </p>
       </div>
-      <Button as-child class="w-full sm:w-auto">
-        <NuxtLink to="/numeros/novo">
+      <Button
+        v-if="businessId"
+        as-child
+        class="w-full sm:w-auto"
+      >
+        <NuxtLink :to="`/numeros/novo?business_id=${businessId}`">
           <Plus class="size-4" />
           Novo número
         </NuxtLink>
       </Button>
     </div>
 
-    <Card class="overflow-hidden py-0">
+    <p v-if="!businessId && !pending" class="text-sm text-muted-foreground">
+      Nenhum negócio vinculado à sua conta ainda.
+    </p>
+
+    <Card v-else class="overflow-hidden py-0">
       <div v-if="pending" class="flex items-center justify-center py-16">
         <Loader2 class="size-5 animate-spin text-muted-foreground" />
       </div>
@@ -164,7 +196,7 @@ async function confirmRemove(e: Event) {
           </p>
         </div>
         <Button as-child size="sm" class="mt-1">
-          <NuxtLink to="/numeros/novo">
+          <NuxtLink :to="`/numeros/novo?business_id=${businessId}`">
             <Plus class="size-4" />
             Novo número
           </NuxtLink>

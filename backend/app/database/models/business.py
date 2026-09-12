@@ -44,6 +44,11 @@ class Business(Base):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending_setup"
     )
+    # "public" (qualquer número recebe resposta) | "private" (só número
+    # cadastrado em PhoneNumber.business_id recebe - ver whatsapp/service.py)
+    visibility: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="public"
+    )
     # nulo até o admin conectar a instância manualmente
     evolution_instance_name: Mapped[str | None] = mapped_column(
         String(255), nullable=True

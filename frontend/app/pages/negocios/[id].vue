@@ -30,11 +30,45 @@ const creating = ref(false);
 const createError = ref("");
 const qrcodeBase64 = ref("");
 
+const visibility = ref<"public" | "private">("public");
+const savingVisibility = ref(false);
+
 watchEffect(() => {
-  if (current.value) instanceName.value = current.value.evolution_instance_name ?? "";
+  if (current.value) {
+    instanceName.value = current.value.evolution_instance_name ?? "";
+    visibility.value = current.value.visibility;
+  }
 });
 
+async function saveVisibility() {
+  savingVisibility.value = true;
+  try {
+    await api(`/businesses/${id}/visibility`, {
+      method: "POST",
+      body: { visibility: visibility.value },
+    });
+    await refreshNuxtData("businesses");
+    toast.success("Visibilidade atualizada.");
+  } catch (err: any) {
+    toast.error(err?.data?.detail ?? "Não foi possível atualizar.");
+  } finally {
+    savingVisibility.value = false;
+  }
+}
+
 async function createInstance() {
+  // já tem instância ligada (ex: negócio já ativo e conectado de verdade) -
+  // gerar uma nova troca o nome no banco e desconecta a instância atual
+  if (
+    current.value?.evolution_instance_name &&
+    !confirm(
+      `Já existe a instância "${current.value.evolution_instance_name}" conectada a esse negócio. ` +
+        "Criar uma nova vai substituí-la e desconectar o WhatsApp atual. Continuar?",
+    )
+  ) {
+    return;
+  }
+
   createError.value = "";
   qrcodeBase64.value = "";
   creating.value = true;
@@ -119,6 +153,35 @@ async function activate() {
           </div>
         </CardHeader>
         <CardContent class="flex flex-col gap-6">
+          <div class="flex flex-col gap-1.5 rounded-lg border p-3">
+            <Label for="visibility">Visibilidade</Label>
+            <div class="flex gap-2">
+              <select
+                id="visibility"
+                v-model="visibility"
+                class="dark:bg-input/30 border-input h-8 flex-1 rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
+              >
+                <option value="public">Público (qualquer cliente recebe resposta)</option>
+                <option value="private">Privado (só número autorizado)</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                :disabled="savingVisibility || visibility === current.visibility"
+                @click="saveVisibility"
+              >
+                {{ savingVisibility ? "Salvando..." : "Salvar" }}
+              </Button>
+            </div>
+            <NuxtLink
+              v-if="visibility === 'private'"
+              :to="`/numeros?business_id=${current.id}`"
+              class="text-xs text-primary hover:underline"
+            >
+              Gerenciar números autorizados →
+            </NuxtLink>
+          </div>
+
           <div class="flex flex-col gap-3">
             <Button :disabled="creating" @click="createInstance">
               {{

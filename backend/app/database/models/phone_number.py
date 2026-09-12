@@ -9,9 +9,18 @@ from app.database.models.user import User
 
 
 class PhoneNumber(Base):
+    """Whitelist de cliente autorizado a falar com o bot - só importa quando
+    Business.visibility == "private" (ver whatsapp/service.py). Único por
+    negócio, não globalmente (dois negócios podem ter o mesmo cliente).
+    """
+
     __tablename__ = "phone_numbers"
     __table_args__ = (
-        UniqueConstraint("phone_number", name="uq_phone_numbers_phone_number"),
+        UniqueConstraint(
+            "business_id",
+            "phone_number",
+            name="uq_phone_numbers_business_id_phone_number",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -22,6 +31,11 @@ class PhoneNumber(Base):
         ForeignKey("users.id"),
         index=True,
         nullable=False,
+    )
+    business_id: Mapped[int | None] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

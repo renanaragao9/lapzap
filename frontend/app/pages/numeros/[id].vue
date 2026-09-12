@@ -5,6 +5,7 @@ interface PhoneNumber {
   id: number;
   name: string;
   phone_number: string;
+  business_id: number;
 }
 
 const route = useRoute();
@@ -20,9 +21,12 @@ const {
 );
 
 async function update(payload: { name: string; phone_number: string }) {
-  await api(`/numbers/${id}`, { method: "PUT", body: payload });
+  await api(`/numbers/${id}`, {
+    method: "PUT",
+    body: { ...payload, business_id: phoneNumber.value!.business_id },
+  });
   toast.success("Número atualizado.");
-  await navigateTo("/numeros");
+  await navigateTo(`/numeros?business_id=${phoneNumber.value!.business_id}`);
 }
 </script>
 

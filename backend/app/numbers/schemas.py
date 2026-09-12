@@ -13,6 +13,7 @@ class PhoneNumberInput(BaseModel):
     )
 
     name: str = Field(min_length=1, max_length=255)
+    business_id: int
 
 
 class PhoneNumberResponse(PhoneNumberInput):

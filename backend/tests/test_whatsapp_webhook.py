@@ -2,11 +2,13 @@ import asyncio
 import logging
 
 import httpx
-from conftest import create_business
+from conftest import create_business, create_user
 from pytest import LogCaptureFixture
 from sqlalchemy import select
 
+from app.database.models.business import Business
 from app.database.models.message_log import MessageLog
+from app.database.models.phone_number import PhoneNumber
 from app.database.session import get_session
 from app.main import app
 
@@ -162,6 +164,66 @@ def test_webhook_does_not_rate_limit_across_different_senders() -> None:
     logged = asyncio.run(_get_logged_message())
     assert logged is not None
     assert logged.blocked is False
+
+
+def test_webhook_blocks_unlisted_sender_on_private_business() -> None:
+    business = asyncio.run(
+        create_business(evolution_instance_name="lapzap-dev", status="active")
+    )
+
+    async def make_private() -> None:
+        async for session in get_test_session():
+            biz = await session.get(Business, business.id)
+            biz.visibility = "private"
+            await session.commit()
+
+    asyncio.run(make_private())
+
+    response = asyncio.run(post_webhook(TEXT_MESSAGE_PAYLOAD))
+    assert response.status_code == 200
+
+    logged = asyncio.run(_get_logged_message())
+    assert logged is not None
+    assert logged.blocked is True
+    assert logged.phone_number_id is None
+
+
+def test_webhook_allows_whitelisted_sender_on_private_business() -> None:
+    business = asyncio.run(
+        create_business(evolution_instance_name="lapzap-dev", status="active")
+    )
+
+    async def whitelist_sender() -> int:
+        owner = await create_user(email="private-biz-owner@example.com")
+        async for session in get_test_session():
+            phone = PhoneNumber(
+                user_id=owner.id,
+                business_id=business.id,
+                name="Cliente",
+                phone_number="+5585999999999",
+            )
+            session.add(phone)
+            await session.commit()
+            await session.refresh(phone)
+            return phone.id
+        raise AssertionError("no session yielded")
+
+    async def make_private() -> None:
+        async for session in get_test_session():
+            biz = await session.get(Business, business.id)
+            biz.visibility = "private"
+            await session.commit()
+
+    asyncio.run(make_private())
+    phone_id = asyncio.run(whitelist_sender())
+
+    response = asyncio.run(post_webhook(TEXT_MESSAGE_PAYLOAD))
+    assert response.status_code == 200
+
+    logged = asyncio.run(_get_logged_message())
+    assert logged is not None
+    assert logged.blocked is False
+    assert logged.phone_number_id == phone_id
 
 
 def test_webhook_skips_persisting_message_without_id() -> None:

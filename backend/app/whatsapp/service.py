@@ -16,6 +16,7 @@ from app.business.service import (
 from app.core.config import settings
 from app.database.models.message_log import MessageLog
 from app.llm.chat_service import ask
+from app.numbers.service import get_active_phone_number_for_business
 from app.whatsapp.media_storage import save_image
 from app.whatsapp.schemas import BroadcastResult, EvolutionWebhookPayload
 
@@ -133,8 +134,17 @@ class WhatsAppService:
         if sender is None or not isinstance(message_id, str):
             return
 
-        # sem whitelist: qualquer número pode mandar, só rate-limit protege
-        blocked = await is_rate_limited(business.id, sender, session)
+        phone_number = None
+        if business.visibility == "private":
+            # só número cadastrado em PhoneNumber.business_id recebe resposta
+            phone_number = await get_active_phone_number_for_business(
+                business.id, f"+{sender}", session
+            )
+            blocked = phone_number is None or await is_rate_limited(
+                business.id, sender, session
+            )
+        else:
+            blocked = await is_rate_limited(business.id, sender, session)
 
         image_message = message.get("imageMessage")
         image_base64 = (
@@ -159,6 +169,7 @@ class WhatsAppService:
         session.add(
             MessageLog(
                 business_id=business.id,
+                phone_number_id=phone_number.id if phone_number else None,
                 sender=sender,
                 external_message_id=message_id,
                 message_type=message_type or "UNKNOWN",

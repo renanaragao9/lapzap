@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ArrowLeft, Plus } from "lucide-vue-next";
 
+const route = useRoute();
 const api = useApi();
+const businessId = Number(route.query.business_id);
 
 async function create(payload: { name: string; phone_number: string }) {
-  await api("/numbers", { method: "POST", body: payload });
+  await api("/numbers", {
+    method: "POST",
+    body: { ...payload, business_id: businessId },
+  });
   toast.success("Número criado.");
-  await navigateTo("/numeros");
+  await navigateTo(`/numeros?business_id=${businessId}`);
 }
 </script>
 
