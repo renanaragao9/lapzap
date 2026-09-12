@@ -1,5 +1,8 @@
+import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,6 +73,52 @@ def _format_hours(hours: list[BusinessHours]) -> str:
                 f"{entry.closes_at.strftime('%Hh%M')}"
             )
     return "\n".join(lines)
+
+
+def _slugify(name: str) -> str:
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_name.lower()).strip("-")
+    return slug or "negocio"
+
+
+async def create_evolution_instance(
+    business: Business, session: AsyncSession
+) -> dict[str, str]:
+    instance_name = f"{_slugify(business.name)}-{business.id}"
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        create_response = await client.post(
+            f"{settings.evolution_api_url}/instance/create",
+            headers={"apikey": settings.evolution_api_key},
+            json={
+                "instanceName": instance_name,
+                "qrcode": True,
+                "integration": "WHATSAPP-BAILEYS",
+            },
+        )
+        create_response.raise_for_status()
+        qrcode_base64 = create_response.json().get("qrcode", {}).get("base64", "")
+
+        webhook_response = await client.post(
+            f"{settings.evolution_api_url}/webhook/set/{instance_name}",
+            headers={"apikey": settings.evolution_api_key},
+            json={
+                "webhook": {
+                    "enabled": True,
+                    "url": f"{settings.lapzap_webhook_base_url}/api/v1/webhooks/whatsapp",
+                    "byEvents": False,
+                    "base64": True,
+                    "events": ["MESSAGES_UPSERT"],
+                }
+            },
+        )
+        webhook_response.raise_for_status()
+
+    business.evolution_instance_name = instance_name
+    business.status = "active"
+    await session.commit()
+
+    return {"evolution_instance_name": instance_name, "qrcode_base64": qrcode_base64}
 
 
 async def build_system_prompt(business: Business, session: AsyncSession) -> str:

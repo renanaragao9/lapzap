@@ -14,7 +14,6 @@ const route = useRoute();
 const api = useApi();
 const id = route.params.id as string;
 
-// não existe GET /businesses/{id} - só a listagem - acha o negócio nela.
 const { data: businesses, pending } = await useAsyncData("businesses", () =>
   api<Business[]>("/businesses"),
 );
@@ -27,9 +26,34 @@ const instanceName = ref("");
 const submitError = ref("");
 const submitting = ref(false);
 
+const creating = ref(false);
+const createError = ref("");
+const qrcodeBase64 = ref("");
+
 watchEffect(() => {
   if (current.value) instanceName.value = current.value.evolution_instance_name ?? "";
 });
+
+async function createInstance() {
+  createError.value = "";
+  qrcodeBase64.value = "";
+  creating.value = true;
+  try {
+    const result = await api<{
+      evolution_instance_name: string;
+      qrcode_base64: string;
+    }>(`/businesses/${id}/create-instance`, { method: "POST" });
+    qrcodeBase64.value = result.qrcode_base64;
+    instanceName.value = result.evolution_instance_name;
+    await refreshNuxtData("businesses");
+    toast.success("Instância criada. Escaneie o QR code pra conectar.");
+  } catch (err: any) {
+    createError.value =
+      err?.data?.detail ?? "Não foi possível criar a instância.";
+  } finally {
+    creating.value = false;
+  }
+}
 
 async function activate() {
   submitError.value = "";
@@ -94,7 +118,43 @@ async function activate() {
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent class="flex flex-col gap-6">
+          <div class="flex flex-col gap-3">
+            <Button :disabled="creating" @click="createInstance">
+              {{
+                creating
+                  ? "Criando instância..."
+                  : current.evolution_instance_name
+                    ? "Criar nova instância (gera novo QR code)"
+                    : "Criar instância automaticamente"
+              }}
+            </Button>
+            <p v-if="createError" class="text-sm text-destructive">
+              {{ createError }}
+            </p>
+
+            <div
+              v-if="qrcodeBase64"
+              class="flex flex-col items-center gap-2 rounded-lg border p-4"
+            >
+              <img
+                :src="qrcodeBase64"
+                alt="QR code do WhatsApp"
+                class="size-48"
+              >
+              <p class="text-center text-xs text-muted-foreground">
+                Escaneie com o WhatsApp do negócio (Aparelhos conectados →
+                Conectar um aparelho) pra ativar de verdade.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 text-xs text-muted-foreground">
+            <div class="h-px flex-1 bg-border" />
+            ou vincule uma instância já existente
+            <div class="h-px flex-1 bg-border" />
+          </div>
+
           <form class="flex flex-col gap-4" @submit.prevent="activate">
             <div class="flex flex-col gap-1.5">
               <Label for="instance_name">Instância no Evolution API</Label>
@@ -105,9 +165,8 @@ async function activate() {
                 placeholder="ex: barbearia-do-ze"
               />
               <p class="text-xs text-muted-foreground">
-                Crie/conecte a instância manualmente no Evolution Manager
-                primeiro (escaneie o QR code), depois cole aqui o nome exato
-                dela.
+                Pra instância criada manualmente no Evolution Manager - cole
+                aqui o nome exato dela.
               </p>
             </div>
 
@@ -115,7 +174,7 @@ async function activate() {
               {{ submitError }}
             </p>
 
-            <Button type="submit" :disabled="submitting">
+            <Button type="submit" variant="outline" :disabled="submitting">
               {{
                 submitting
                   ? "Salvando..."

@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     evolution_api_url: str
     evolution_api_key: str
     evolution_instance_name: str
+   
+    lapzap_webhook_base_url: str = "http://host.docker.internal:8000"
 
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "minicpm-v"

@@ -23,3 +23,8 @@ class BusinessResponse(BaseModel):
 
 class BusinessActivateRequest(BaseModel):
     evolution_instance_name: str
+
+
+class CreateInstanceResponse(BaseModel):
+    evolution_instance_name: str
+    qrcode_base64: str
