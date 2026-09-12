@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 import pytest
@@ -9,7 +10,9 @@ from sqlalchemy.pool import StaticPool
 from app.core.security import create_access_token, hash_password
 from app.database.base import Base
 from app.database.models.message_log import MessageLog  # noqa: F401 (register mapping)
-from app.database.models.phone_number import PhoneNumber  # noqa: F401 (register mapping)
+from app.database.models.phone_number import (
+    PhoneNumber,  # noqa: F401 (register mapping)
+)
 from app.database.models.user import User
 from app.database.session import get_session
 from app.main import app
@@ -21,7 +24,9 @@ engine = create_async_engine(
     poolclass=StaticPool,
     connect_args={"check_same_thread": False},
 )
-session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+session_factory = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 async def _test_session() -> AsyncIterator[AsyncSession]:
@@ -65,7 +70,7 @@ def auth_headers(user_id: int) -> dict[str, str]:
     return {"Authorization": f"Bearer {create_access_token(user_id)}"}
 
 
-async def request(method: str, url: str, **kwargs: object) -> httpx.Response:
+async def request(method: str, url: str, **kwargs: Any) -> httpx.Response:
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(
         transport=transport,
