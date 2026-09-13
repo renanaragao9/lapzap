@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Loader2, Phone, Plus } from "lucide-vue-next";
-import type { Business } from "~/types/business";
 
 interface PhoneNumber {
   id: number;
@@ -14,9 +13,7 @@ const api = useApi();
 
 // não tem seletor de negócio ainda (1 negócio por conta é o caso comum) -
 // usa o business_id da URL, ou o primeiro negócio do usuário.
-const { data: myBusinesses } = await useAsyncData("my-businesses", () =>
-  api<Business[]>("/businesses/mine"),
-);
+const { data: myBusinesses } = await useMyBusiness();
 
 const businessId = computed(() => {
   const fromQuery = Number(route.query.business_id);

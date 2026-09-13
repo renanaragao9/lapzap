@@ -7,6 +7,8 @@ const name = ref("");
 const businessType = ref("barbearia");
 const phoneNumber = ref("");
 const plan = ref("starter");
+const email = ref("");
+const password = ref("");
 const error = ref("");
 const loading = ref(false);
 const done = ref(false);
@@ -29,6 +31,8 @@ async function handleSubmit() {
         business_type: businessType.value,
         contact_phone_number: phoneNumber.value,
         plan: plan.value,
+        email: email.value,
+        password: password.value,
       },
     });
     done.value = true;
@@ -127,6 +131,29 @@ async function handleSubmit() {
                   <option value="starter">Starter</option>
                   <option value="pro">Pro</option>
                 </select>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <Label for="email">E-mail de acesso</Label>
+                <Input
+                  id="email"
+                  v-model="email"
+                  type="email"
+                  required
+                  placeholder="voce@email.com"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <Label for="password">Senha</Label>
+                <Input
+                  id="password"
+                  v-model="password"
+                  type="password"
+                  required
+                  minlength="6"
+                  placeholder="mínimo 6 caracteres"
+                />
               </div>
 
               <p v-if="error" class="text-sm text-destructive">{{ error }}</p>

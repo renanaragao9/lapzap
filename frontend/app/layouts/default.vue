@@ -36,6 +36,13 @@ function handleLogout() {
           >Mensagens</NuxtLink
         >
         <NuxtLink
+          v-if="!me?.is_admin"
+          to="/meu-negocio"
+          class="text-sm text-muted-foreground hover:text-foreground"
+          active-class="font-semibold text-primary"
+          >Meu Negócio</NuxtLink
+        >
+        <NuxtLink
           v-if="me?.is_admin"
           to="/negocios"
           class="text-sm text-muted-foreground hover:text-foreground"

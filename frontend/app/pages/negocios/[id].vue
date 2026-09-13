@@ -33,12 +33,39 @@ const qrcodeBase64 = ref("");
 const visibility = ref<"public" | "private">("public");
 const savingVisibility = ref(false);
 
+const infoContent = ref("");
+const savingInfo = ref(false);
+
 watchEffect(() => {
   if (current.value) {
     instanceName.value = current.value.evolution_instance_name ?? "";
     visibility.value = current.value.visibility;
   }
 });
+
+watchEffect(async () => {
+  if (!current.value) return;
+  const info = await api<{ content: string }>(
+    `/businesses/${current.value.id}/info`,
+  ).catch(() => null);
+  infoContent.value = info?.content ?? "";
+});
+
+async function saveInfo() {
+  if (!current.value) return;
+  savingInfo.value = true;
+  try {
+    await api(`/businesses/${current.value.id}/info`, {
+      method: "PUT",
+      body: { content: infoContent.value },
+    });
+    toast.success("Informações salvas.");
+  } catch (err: any) {
+    toast.error(err?.data?.detail ?? "Não foi possível salvar.");
+  } finally {
+    savingInfo.value = false;
+  }
+}
 
 async function saveVisibility() {
   savingVisibility.value = true;
@@ -91,15 +118,13 @@ async function createInstance() {
 
 async function activate() {
   submitError.value = "";
-  if (!instanceName.value.trim()) {
-    submitError.value = "Informe o nome da instância no Evolution API.";
-    return;
-  }
   submitting.value = true;
   try {
+    // vazio = mantém a instância que já existe (dono criou sozinho) - só
+    // manda quando quer vincular/trocar manualmente
     await api(`/businesses/${id}/activate`, {
       method: "POST",
-      body: { evolution_instance_name: instanceName.value.trim() },
+      body: { evolution_instance_name: instanceName.value.trim() || null },
     });
     toast.success("Negócio ativado.");
     await refreshNuxtData("businesses");
@@ -224,12 +249,12 @@ async function activate() {
               <Input
                 id="instance_name"
                 v-model="instanceName"
-                required
                 placeholder="ex: barbearia-do-ze"
               />
               <p class="text-xs text-muted-foreground">
-                Pra instância criada manualmente no Evolution Manager - cole
-                aqui o nome exato dela.
+                Opcional - só preencha pra vincular manualmente uma instância
+                criada no Evolution Manager. Se o dono já criou a própria
+                instância, deixe em branco e só aprove.
               </p>
             </div>
 
@@ -247,6 +272,32 @@ async function activate() {
               }}
             </Button>
           </form>
+
+          <div class="flex flex-col gap-1.5 rounded-lg border p-3">
+            <Label for="info">Informações pro atendente (markdown)</Label>
+            <textarea
+              id="info"
+              v-model="infoContent"
+              rows="8"
+              placeholder="Ex: aceitamos cartão e pix, não temos estacionamento, promoção de terça..."
+              class="dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-lg border bg-transparent px-2.5 py-1.5 text-base transition-colors focus-visible:ring-3 md:text-sm"
+            />
+            <p class="text-xs text-muted-foreground">
+              Esse texto vira contexto extra pro LLM responder os clientes
+              desse negócio.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              class="w-fit"
+              :disabled="savingInfo"
+              @click="saveInfo"
+            >
+              {{ savingInfo ? "Salvando..." : "Salvar informações" }}
+            </Button>
+          </div>
+
+          <BusinessIntegrations :business-id="current.id" />
         </CardContent>
       </template>
     </Card>

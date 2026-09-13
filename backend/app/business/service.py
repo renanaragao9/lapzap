@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.database.models.business import Business
 from app.database.models.business_hours import BusinessHours
+from app.database.models.business_info import BusinessInfo
 from app.database.models.message_log import MessageLog
 
 _WEEKDAY_NAMES = [
@@ -114,8 +115,10 @@ async def create_evolution_instance(
         )
         webhook_response.raise_for_status()
 
+    # não marca "active" aqui - dono ainda precisa escanear o QR code, e o
+    # negócio só passa a responder de verdade depois que o admin aprovar
+    # (ver activate em business/router.py)
     business.evolution_instance_name = instance_name
-    business.status = "active"
     await session.commit()
 
     return {"evolution_instance_name": instance_name, "qrcode_base64": qrcode_base64}
@@ -138,5 +141,11 @@ async def build_system_prompt(business: Business, session: AsyncSession) -> str:
             .order_by(BusinessHours.weekday),
         )
         parts.append("\nHorário de funcionamento:\n" + _format_hours(list(hours)))
+
+    info = await session.scalar(
+        select(BusinessInfo).where(BusinessInfo.business_id == business.id)
+    )
+    if info is not None:
+        parts.append("\nInformações do negócio:\n" + info.content)
 
     return "\n\n".join(parts)

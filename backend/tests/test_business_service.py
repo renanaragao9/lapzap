@@ -1,7 +1,7 @@
 import asyncio
 from datetime import time
 
-from conftest import create_business, session_factory
+from conftest import create_business, create_business_info, session_factory
 
 from app.business.service import (
     build_system_prompt,
@@ -97,6 +97,39 @@ def test_build_system_prompt_generico_has_no_hours_section() -> None:
 
         assert "Loja Teste" in prompt
         assert "Horário de funcionamento" not in prompt
+
+    asyncio.run(scenario())
+
+
+def test_build_system_prompt_includes_business_info() -> None:
+    async def scenario() -> None:
+        business = await create_business(
+            evolution_instance_name="info-service-biz",
+            name="Loja com Info",
+            business_type="loja",
+        )
+        await create_business_info(
+            business.id, content="Aceitamos cartão e pix, não temos estacionamento."
+        )
+
+        async with session_factory() as session:
+            prompt = await build_system_prompt(business, session)
+
+        assert "Aceitamos cartão e pix" in prompt
+
+    asyncio.run(scenario())
+
+
+def test_build_system_prompt_without_info_has_no_info_section() -> None:
+    async def scenario() -> None:
+        business = await create_business(
+            evolution_instance_name="no-info-biz", name="Sem Info", business_type="loja"
+        )
+
+        async with session_factory() as session:
+            prompt = await build_system_prompt(business, session)
+
+        assert "Informações do negócio" not in prompt
 
     asyncio.run(scenario())
 

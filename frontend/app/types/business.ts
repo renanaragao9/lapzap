@@ -10,3 +10,17 @@ export interface Business {
   evolution_instance_name: string | null;
   created_at: string;
 }
+
+export type IntegrationType = "google_calendar" | "outlook_calendar" | "generic";
+
+export interface BusinessIntegration {
+  id: number;
+  business_id: number;
+  name: string;
+  type: IntegrationType;
+  host: string | null;
+  email: string | null;
+  has_secret: boolean;
+  created_at: string;
+  updated_at: string;
+}

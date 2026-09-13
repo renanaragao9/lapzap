@@ -7,6 +7,8 @@ SIGNUP_PAYLOAD = {
     "business_type": "barbearia",
     "contact_phone_number": "+5585999999999",
     "plan": "starter",
+    "email": "ze@example.com",
+    "password": "123456",
 }
 
 
@@ -186,5 +188,66 @@ def test_activate_missing_business_returns_404() -> None:
             headers=auth_headers(admin.id),
         )
         assert response.status_code == 404
+
+    asyncio.run(scenario())
+
+
+def test_create_instance_forbidden_for_non_owner() -> None:
+    async def scenario() -> None:
+        owner = await create_user(email="instance-owner@example.com")
+        stranger = await create_user(email="instance-stranger@example.com")
+        business = await create_business(
+            evolution_instance_name="biz-instance-1",
+            user_id=owner.id,
+            status="pending_setup",
+        )
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/create-instance",
+            headers=auth_headers(stranger.id),
+        )
+        assert response.status_code == 403
+
+    asyncio.run(scenario())
+
+
+def test_activate_requires_instance_name_when_none_set() -> None:
+    async def scenario() -> None:
+        admin = await create_user(email="admin4@example.com", is_admin=True)
+        business = await create_business(
+            evolution_instance_name=None, status="pending_setup"
+        )
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/activate",
+            json={},
+            headers=auth_headers(admin.id),
+        )
+        assert response.status_code == 400
+
+    asyncio.run(scenario())
+
+
+def test_activate_approves_owner_created_instance_without_reinput() -> None:
+    async def scenario() -> None:
+        admin = await create_user(email="admin5@example.com", is_admin=True)
+        # dono já criou a instância sozinho (create-instance) - status ainda
+        # pending_setup, esperando aprovação
+        business = await create_business(
+            evolution_instance_name="biz-owner-created", status="pending_setup"
+        )
+
+        response = await request(
+            "POST",
+            f"/api/v1/businesses/{business.id}/activate",
+            json={},
+            headers=auth_headers(admin.id),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "active"
+        assert body["evolution_instance_name"] == "biz-owner-created"
 
     asyncio.run(scenario())

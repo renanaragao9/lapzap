@@ -1,7 +1,7 @@
-"""Create businesses / business_hours, add business_id + sender to message_logs.
+"""Create businesses, add business_id + sender to message_logs.
 
 Revision ID: 0005_create_businesses
-Revises: 0004_add_users_is_admin
+Revises: 0003_create_message_logs
 Create Date: 2026-09-12
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0005_create_businesses"
-down_revision: str | None = "0004_add_users_is_admin"
+down_revision: str | None = "0003_create_message_logs"
 branch_labels: Sequence[str] | None = None
 depends_on: Sequence[str] | None = None
 
@@ -21,8 +21,8 @@ def upgrade() -> None:
     op.create_table(
         "businesses",
         sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("evolution_instance_name", sa.String(length=255), nullable=True),
         sa.Column("business_type", sa.String(length=30), nullable=False),
         sa.Column("contact_phone_number", sa.String(length=20), nullable=False),
         sa.Column("plan", sa.String(length=30), nullable=False),
@@ -32,7 +32,13 @@ def upgrade() -> None:
             nullable=False,
             server_default="pending_setup",
         ),
-        sa.Column("evolution_instance_name", sa.String(length=255), nullable=True),
+        sa.Column(
+            "visibility",
+            sa.String(length=20),
+            nullable=False,
+            server_default="public",
+        ),
+        sa.Column("user_id", sa.Integer(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(),
@@ -51,25 +57,11 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "evolution_instance_name", name="uq_businesses_evolution_instance_name"
         ),
-    )
-    op.create_index("ix_businesses_user_id", "businesses", ["user_id"])
-
-    op.create_table(
-        "business_hours",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("business_id", sa.Integer(), nullable=False),
-        sa.Column("weekday", sa.Integer(), nullable=False),
-        sa.Column("opens_at", sa.Time(), nullable=True),
-        sa.Column("closes_at", sa.Time(), nullable=True),
-        sa.Column("is_closed", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.ForeignKeyConstraint(
-            ["business_id"],
-            ["businesses.id"],
-            name="fk_business_hours_business_id_businesses",
-            ondelete="CASCADE",
+        sa.UniqueConstraint(
+            "contact_phone_number", name="uq_businesses_contact_phone_number"
         ),
     )
-    op.create_index("ix_business_hours_business_id", "business_hours", ["business_id"])
+    op.create_index("ix_businesses_user_id", "businesses", ["user_id"])
 
     op.add_column("message_logs", sa.Column("business_id", sa.Integer(), nullable=True))
     op.add_column(
@@ -85,17 +77,49 @@ def upgrade() -> None:
     )
     op.create_index("ix_message_logs_business_id", "message_logs", ["business_id"])
 
+    op.add_column(
+        "phone_numbers", sa.Column("business_id", sa.Integer(), nullable=True)
+    )
+    op.create_foreign_key(
+        "fk_phone_numbers_business_id_businesses",
+        "phone_numbers",
+        "businesses",
+        ["business_id"],
+        ["id"],
+        ondelete="CASCADE",
+    )
+    op.create_index("ix_phone_numbers_business_id", "phone_numbers", ["business_id"])
+
+    op.drop_constraint("uq_phone_numbers_phone_number", "phone_numbers", type_="unique")
+    op.create_unique_constraint(
+        "uq_phone_numbers_business_id_phone_number",
+        "phone_numbers",
+        ["business_id", "phone_number"],
+    )
+
 
 def downgrade() -> None:
+    op.drop_constraint(
+        "uq_phone_numbers_business_id_phone_number",
+        "phone_numbers",
+        type_="unique",
+    )
+    op.create_unique_constraint(
+        "uq_phone_numbers_phone_number", "phone_numbers", ["phone_number"]
+    )
+
+    op.drop_index("ix_phone_numbers_business_id", table_name="phone_numbers")
+    op.drop_constraint(
+        "fk_phone_numbers_business_id_businesses", "phone_numbers", type_="foreignkey"
+    )
+    op.drop_column("phone_numbers", "business_id")
+
     op.drop_index("ix_message_logs_business_id", table_name="message_logs")
     op.drop_constraint(
         "fk_message_logs_business_id_businesses", "message_logs", type_="foreignkey"
     )
     op.drop_column("message_logs", "sender")
     op.drop_column("message_logs", "business_id")
-
-    op.drop_index("ix_business_hours_business_id", table_name="business_hours")
-    op.drop_table("business_hours")
 
     op.drop_index("ix_businesses_user_id", table_name="businesses")
     op.drop_table("businesses")

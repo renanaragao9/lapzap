@@ -4,6 +4,11 @@ import asyncio
 from sqlalchemy import select
 
 from app.core.security import hash_password
+from app.database.models.business import Business  # noqa: F401
+from app.database.models.business_hours import BusinessHours  # noqa: F401
+from app.database.models.business_info import BusinessInfo  # noqa: F401
+from app.database.models.business_integration import BusinessIntegration  # noqa: F401
+from app.database.models.message_log import MessageLog  # noqa: F401
 from app.database.models.phone_number import PhoneNumber
 from app.database.models.user import User
 from app.database.session import async_session_factory, engine

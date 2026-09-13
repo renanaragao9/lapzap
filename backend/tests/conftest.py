@@ -1,6 +1,8 @@
 import asyncio
+import zlib
 from collections.abc import AsyncIterator
 from typing import Any
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -12,6 +14,10 @@ from app.database.base import Base
 from app.database.models.business import Business
 from app.database.models.business_hours import (
     BusinessHours,  # noqa: F401 (register mapping)
+)
+from app.database.models.business_info import BusinessInfo
+from app.database.models.business_integration import (
+    BusinessIntegration,  # noqa: F401 (register mapping)
 )
 from app.database.models.message_log import MessageLog  # noqa: F401 (register mapping)
 from app.database.models.phone_number import (
@@ -75,18 +81,24 @@ def auth_headers(user_id: int) -> dict[str, str]:
 
 
 async def create_business(
-    evolution_instance_name: str,
+    evolution_instance_name: str | None,
     user_id: int | None = None,
     name: str = "Test Business",
     business_type: str = "generico",
     status: str = "active",
+    contact_phone_number: str | None = None,
 ) -> Business:
+    if contact_phone_number is None:
+        seed = evolution_instance_name or uuid4().hex
+        suffix = zlib.crc32(seed.encode()) % 10**8
+        contact_phone_number = f"+5585{suffix:08d}"
+
     async with session_factory() as session:
         business = Business(
             user_id=user_id,
             name=name,
             business_type=business_type,
-            contact_phone_number="+5585999999999",
+            contact_phone_number=contact_phone_number,
             plan="starter",
             status=status,
             evolution_instance_name=evolution_instance_name,
@@ -95,6 +107,15 @@ async def create_business(
         await session.commit()
         await session.refresh(business)
         return business
+
+
+async def create_business_info(business_id: int, content: str = "Info de teste") -> BusinessInfo:
+    async with session_factory() as session:
+        info = BusinessInfo(business_id=business_id, content=content)
+        session.add(info)
+        await session.commit()
+        await session.refresh(info)
+        return info
 
 
 async def request(method: str, url: str, **kwargs: Any) -> httpx.Response:

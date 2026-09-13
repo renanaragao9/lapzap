@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import settings
 from app.database.base import Base
+from app.database.models.business import Business  # noqa: F401
+from app.database.models.business_hours import BusinessHours  # noqa: F401
+from app.database.models.business_info import BusinessInfo  # noqa: F401
+from app.database.models.business_integration import BusinessIntegration  # noqa: F401
 from app.database.models.message_log import MessageLog  # noqa: F401
 from app.database.models.phone_number import PhoneNumber  # noqa: F401
 from app.database.models.user import User  # noqa: F401

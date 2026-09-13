@@ -2,6 +2,8 @@ import asyncio
 
 from conftest import auth_headers, create_business, create_user, request
 
+BROADCAST_BODY = {"numbers": ["+5585999999999"], "text": "oi"}
+
 
 def webhook_payload(instance: str, remote_jid: str, text: str, message_id: str) -> dict:
     return {
@@ -93,3 +95,24 @@ def test_list_messages_excludes_business_without_owner() -> None:
         assert response.json() == []
 
     asyncio.run(scenario())
+
+
+def test_broadcast_requires_admin() -> None:
+    async def scenario() -> None:
+        owner = await create_user(email="owner3@example.com")
+        response = await request(
+            "POST",
+            "/api/v1/messages/broadcast",
+            json=BROADCAST_BODY,
+            headers=auth_headers(owner.id),
+        )
+        assert response.status_code == 403
+
+    asyncio.run(scenario())
+
+
+def test_broadcast_requires_auth() -> None:
+    response = asyncio.run(
+        request("POST", "/api/v1/messages/broadcast", json=BROADCAST_BODY)
+    )
+    assert response.status_code == 401

@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.service import get_current_user
+from app.auth.service import get_current_admin, get_current_user
 from app.database.models.user import User
 from app.database.session import get_session
 from app.messages import service
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/v1/messages", tags=["Message logs"])
 whatsapp_service = WhatsAppService()
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentAdmin = Annotated[User, Depends(get_current_admin)]
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
@@ -31,7 +32,7 @@ async def list_messages(
 @router.post("/broadcast", response_model=list[BroadcastResult])
 async def broadcast_messages(
     payload: BroadcastRequest,
-    _current_user: CurrentUser,
+    _current_admin: CurrentAdmin,
     session: Session,
 ) -> list[BroadcastResult]:
     return await whatsapp_service.broadcast(

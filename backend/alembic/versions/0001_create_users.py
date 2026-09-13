@@ -31,6 +31,12 @@ def upgrade() -> None:
             server_default=sa.true(),
         ),
         sa.Column(
+            "is_admin",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
+        sa.Column(
             "created_at",
             sa.DateTime(),
             nullable=False,

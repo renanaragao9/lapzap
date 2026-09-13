@@ -8,6 +8,8 @@ from app.database.base import Base
 
 if TYPE_CHECKING:
     from app.database.models.business_hours import BusinessHours
+    from app.database.models.business_info import BusinessInfo
+    from app.database.models.business_integration import BusinessIntegration
     from app.database.models.user import User
 
 
@@ -15,9 +17,10 @@ class Business(Base):
     """Um tenant: 1 negócio = 1 instância WhatsApp (Evolution API) própria.
 
     Fluxo de criação: cliente preenche form público (nome, tipo, telefone de
-    contato, plano) -> nasce com status "pending_setup" e sem instância
-    ligada. Conectar a instância WhatsApp de verdade (criar no Evolution API,
-    escanear QR) é passo manual do admin - depois disso ele preenche
+    contato, plano, e-mail/senha) -> nasce com status "pending_setup", sem
+    instância ligada, já com a conta de login criada e vinculada. Conectar a
+    instância WhatsApp de verdade (criar no Evolution API, escanear QR) é
+    passo manual do admin - depois disso ele preenche
     `evolution_instance_name` e marca status "active".
     """
 
@@ -26,11 +29,14 @@ class Business(Base):
         UniqueConstraint(
             "evolution_instance_name", name="uq_businesses_evolution_instance_name"
         ),
+        UniqueConstraint(
+            "contact_phone_number", name="uq_businesses_contact_phone_number"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # nulo até o cadastro público ser vinculado a uma conta de login (feito
-    # manualmente pelo admin junto da ativação da instância)
+    # nullable só por causa de negócios criados antes desse fluxo exigir
+    # conta - todo cadastro novo já nasce vinculado (ver signup em business/router.py)
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=True
     )
@@ -63,4 +69,12 @@ class Business(Base):
     user: Mapped["User | None"] = relationship()
     hours: Mapped[list["BusinessHours"]] = relationship(
         back_populates="business", order_by="BusinessHours.weekday"
+    )
+    info: Mapped["BusinessInfo | None"] = relationship(
+        back_populates="business", uselist=False, cascade="all, delete-orphan"
+    )
+    integrations: Mapped[list["BusinessIntegration"]] = relationship(
+        back_populates="business",
+        cascade="all, delete-orphan",
+        order_by="BusinessIntegration.name",
     )
