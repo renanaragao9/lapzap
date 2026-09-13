@@ -21,24 +21,31 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 @router.get("", response_model=list[UserResponse])
 async def list_users(session: Session) -> list[User]:
+    """Lista todos os usuários - admin, tela /usuarios."""
     return await service.list_users(session)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: int, session: Session) -> User:
+    """Detalhe de um usuário - 404 se não existe. Admin."""
     return await service.get_user_or_404(user_id, session)
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(data: UserCreate, session: Session) -> User:
+    """Cria um usuário - 409 se o e-mail já está cadastrado. Admin."""
     return await service.create_user(data, session)
 
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(user_id: int, data: UserInput, session: Session) -> User:
+    """Atualiza nome/e-mail/status/admin de um usuário - admin."""
     return await service.update_user(user_id, data, session)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, admin: CurrentAdmin, session: Session) -> None:
+    """Remove um usuário - 400 se for a própria conta do admin, 409 se ele
+    ainda tem números autorizados vinculados.
+    """
     await service.delete_user(user_id, admin, session)

@@ -14,15 +14,12 @@ from app.numbers.schemas import PhoneNumberInput
 
 
 def _br_number_variants(phone_number: str) -> list[str]:
-    """BR: WhatsApp manda/recebe número com ou sem o 9º dígito móvel
-    (ex: +5585997304827 vs +558597304827 são o mesmo número) - gera as duas
-    formas pra não perder o match por causa disso.
-    """
     digits = phone_number.lstrip("+")
     variants = {phone_number}
 
     if digits.startswith("55") and len(digits) in (12, 13):
         ddi, ddd, rest = digits[:2], digits[2:4], digits[4:]
+
         if len(rest) == 8:
             variants.add(f"+{ddi}{ddd}9{rest}")
         elif len(rest) == 9 and rest[0] == "9":
@@ -36,9 +33,6 @@ async def get_active_phone_number_for_business(
     phone_number: str,
     session: AsyncSession,
 ) -> PhoneNumber | None:
-    """Whitelist por negócio - só importa quando Business.visibility ==
-    "private" (ver whatsapp/service.py).
-    """
     return await session.scalar(
         select(PhoneNumber).where(
             PhoneNumber.business_id == business_id,

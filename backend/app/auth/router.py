@@ -18,6 +18,9 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 @router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, session: Session) -> TokenResponse:
+    """Autentica com e-mail/senha e devolve o JWT - 401 se credenciais
+    inválidas ou conta inativa.
+    """
     user = await authenticate_user(data.email, data.password, session)
 
     if user is None or not user.is_active:
@@ -32,4 +35,5 @@ async def login(data: LoginRequest, session: Session) -> TokenResponse:
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: CurrentUser) -> User:
+    """Dados do usuário logado (a partir do token) - qualquer usuário ativo."""
     return current_user

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class MessageLogResponse(BaseModel):
     id: int
-    phone_number: str | None  # número de quem mandou/recebeu (MessageLog.sender)
+    phone_number: str | None
     business_name: str | None
     message_type: str
     direction: str

@@ -19,6 +19,10 @@ async def receive_evolution_webhook(
     event: dict[str, Any],
     session: Session,
 ) -> WebhookResponse:
+    """Recebe evento da Evolution API (mensagem inbound) - roteia pro negócio
+    dono da instância, aplica rate-limit/whitelist e responde via LLM. Sem
+    autenticação (chamado pela Evolution API).
+    """
     payload = EvolutionWebhookPayload.model_validate(event)
     await whatsapp_service.process_webhook(payload, event, session)
     return WebhookResponse()

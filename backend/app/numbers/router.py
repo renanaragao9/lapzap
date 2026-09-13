@@ -24,6 +24,9 @@ async def create_phone_number(
     current_user: CurrentUser,
     session: Session,
 ) -> PhoneNumber:
+    """Cadastra um número autorizado num negócio - 403 se quem chama não é
+    dono do negócio nem admin, 409 se o número já existe nesse negócio.
+    """
     return await service.create_phone_number(data, current_user, session)
 
 
@@ -33,6 +36,7 @@ async def list_phone_numbers(
     session: Session,
     business_id: Annotated[int, Query()],
 ) -> list[PhoneNumber]:
+    """Lista os números autorizados de um negócio - dono ou admin."""
     return await service.list_phone_numbers(business_id, current_user, session)
 
 
@@ -42,6 +46,9 @@ async def get_phone_number(
     current_user: CurrentUser,
     session: Session,
 ) -> PhoneNumber:
+    """Detalhe de um número - 404 se não existe ou não pertence a negócio
+    do usuário logado.
+    """
     return await service.get_owned_phone_number_or_404(
         phone_number_id,
         current_user,
@@ -56,6 +63,7 @@ async def update_phone_number(
     current_user: CurrentUser,
     session: Session,
 ) -> PhoneNumber:
+    """Atualiza nome/telefone de um número autorizado - dono do negócio."""
     return await service.update_phone_number(
         phone_number_id,
         data,
@@ -70,4 +78,5 @@ async def delete_phone_number(
     current_user: CurrentUser,
     session: Session,
 ) -> None:
+    """Remove um número autorizado - dono do negócio."""
     await service.delete_phone_number(phone_number_id, current_user, session)

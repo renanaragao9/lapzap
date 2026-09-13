@@ -26,6 +26,9 @@ async def list_messages(
     session: Session,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[MessageLogResponse]:
+    """Histórico de mensagens dos negócios do usuário logado (mais recentes
+    primeiro) - negócio sem dono vinculado não aparece pra ninguém.
+    """
     return await service.list_messages(current_user, session, limit)
 
 
@@ -35,6 +38,9 @@ async def broadcast_messages(
     _current_admin: CurrentAdmin,
     session: Session,
 ) -> list[BroadcastResult]:
+    """Dispara a mesma mensagem de texto pra uma lista de números via
+    instância padrão do WhatsApp - só admin.
+    """
     return await whatsapp_service.broadcast(
         payload.numbers, payload.text, session, payload.delay_seconds
     )

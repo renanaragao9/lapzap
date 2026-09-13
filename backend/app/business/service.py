@@ -3,6 +3,7 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 
 import httpx
+from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +12,7 @@ from app.database.models.business import Business
 from app.database.models.business_hours import BusinessHours
 from app.database.models.business_info import BusinessInfo
 from app.database.models.message_log import MessageLog
+from app.database.models.user import User
 
 _WEEKDAY_NAMES = [
     "Segunda",
@@ -21,6 +23,28 @@ _WEEKDAY_NAMES = [
     "Sábado",
     "Domingo",
 ]
+
+
+async def get_owned_business_or_403(
+    business_id: int, current_user: User, session: AsyncSession
+) -> Business:
+    """Busca o negócio ou 404; 403 se quem chama não é o dono nem admin.
+
+    Compartilhado entre os domínios de negócio (business, business_info,
+    business_integrations) - todo sub-recurso de um negócio usa essa mesma
+    checagem de posse.
+    """
+    business = await session.get(Business, business_id)
+
+    if business is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Negócio não encontrado.")
+
+    if business.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Sem permissão pra esse negócio."
+        )
+
+    return business
 
 
 async def get_business_by_instance(

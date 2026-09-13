@@ -26,8 +26,9 @@ logger = logging.getLogger(__name__)
 def _sanitize_for_log(
     raw_payload: dict[str, Any], media_path: str | None
 ) -> dict[str, Any]:
-    payload = json.loads(json.dumps(raw_payload))  # deep copy simples
+    payload = json.loads(json.dumps(raw_payload))
     message = payload.get("data", {}).get("message")
+
     if isinstance(message, dict) and "base64" in message:
         message["base64"] = (
             f"<salvo em {media_path}>" if media_path else "<falha ao salvar>"
@@ -74,7 +75,7 @@ class WhatsAppService:
                     )
                 )
                 results.append(BroadcastResult(number=number, status="sent"))
-            except Exception as exc:  # - reporta erro por número, segue o lote
+            except Exception as exc:
                 logger.exception("Broadcast send failed: number=%s", number)
                 results.append(
                     BroadcastResult(number=number, status="error", detail=str(exc))
@@ -102,12 +103,11 @@ class WhatsAppService:
         key: dict[str, Any] = raw_key if isinstance(raw_key, dict) else {}
 
         if key.get("fromMe"):
-            # mensagem que o próprio bot mandou, ecoada de volta pelo webhook -
-            # ignora, senão ele responde a si mesmo em loop
             return
 
         instance_name = payload.instance or data.get("instance")
         business = await get_business_by_instance(instance_name, session)
+
         if business is None:
             logger.warning(
                 "Evolution webhook: nenhum negócio ativo pra instância=%s",
@@ -135,8 +135,8 @@ class WhatsAppService:
             return
 
         phone_number = None
+
         if business.visibility == "private":
-            # só número cadastrado em PhoneNumber.business_id recebe resposta
             phone_number = await get_active_phone_number_for_business(
                 business.id, f"+{sender}", session
             )
@@ -152,6 +152,7 @@ class WhatsAppService:
         )
 
         media_path = None
+
         if image_base64:
             try:
                 media_path = save_image(
@@ -181,9 +182,7 @@ class WhatsAppService:
         )
         await session.commit()
 
-        logger.info(
-            "Evolution rate limit check: sender=%s blocked=%s", sender, blocked
-        )
+        logger.info("Evolution rate limit check: sender=%s blocked=%s", sender, blocked)
 
         if blocked:
             return
@@ -204,8 +203,6 @@ class WhatsAppService:
                 sender, reply, business.evolution_instance_name
             )
         except Exception:
-            # falha de rede/Evolution API não deve derrubar o webhook -
-            # Evolution não deveria receber 500 por causa disso
             logger.exception("Send reply failed: sender=%s", sender)
             return
 
