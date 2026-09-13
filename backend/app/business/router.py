@@ -36,10 +36,15 @@ async def _get_owned_business_or_403(
     business_id: int, current_user: User, session: AsyncSession
 ) -> Business:
     business = await session.get(Business, business_id)
+
     if business is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Negócio não encontrado.")
+
     if business.user_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sem permissão pra esse negócio.")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Sem permissão pra esse negócio."
+        )
+
     return business
 
 
@@ -175,11 +180,16 @@ async def get_info(
     business_id: int, current_user: CurrentUser, session: Session
 ) -> BusinessInfo:
     await _get_owned_business_or_403(business_id, current_user, session)
+
     info = await session.scalar(
         select(BusinessInfo).where(BusinessInfo.business_id == business_id)
     )
+
     if info is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Negócio ainda não tem informações cadastradas.")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Negócio ainda não tem informações cadastradas."
+        )
+
     return info
 
 
@@ -194,9 +204,11 @@ async def set_info(
     LLM (ver build_system_prompt) - cria ou atualiza, dono ou admin.
     """
     await _get_owned_business_or_403(business_id, current_user, session)
+
     info = await session.scalar(
         select(BusinessInfo).where(BusinessInfo.business_id == business_id)
     )
+
     if info is None:
         info = BusinessInfo(business_id=business_id, content=data.content)
         session.add(info)
@@ -205,6 +217,7 @@ async def set_info(
 
     await session.commit()
     await session.refresh(info)
+
     return info
 
 
@@ -213,9 +226,11 @@ async def delete_info(
     business_id: int, current_user: CurrentUser, session: Session
 ) -> None:
     await _get_owned_business_or_403(business_id, current_user, session)
+
     info = await session.scalar(
         select(BusinessInfo).where(BusinessInfo.business_id == business_id)
     )
+
     if info is not None:
         await session.delete(info)
         await session.commit()
@@ -324,7 +339,7 @@ async def update_integration(
     integration.type = data.type
     integration.host = data.host
     integration.email = data.email
-    # secret omitido = mantém o que já tá salvo
+
     if data.secret:
         integration.encrypted_secret = encrypt_secret(data.secret)
 

@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.database.models.business_integration import IntegrationType
+
 
 class BusinessSignupRequest(BaseModel):
     name: str
@@ -48,9 +50,6 @@ class BusinessInfoResponse(BaseModel):
     content: str
     created_at: datetime
     updated_at: datetime
-
-
-IntegrationType = Literal["google_calendar", "outlook_calendar", "generic"]
 
 
 class BusinessIntegrationRequest(BaseModel):

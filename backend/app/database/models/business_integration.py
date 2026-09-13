@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,6 +8,8 @@ from app.database.base import Base
 
 if TYPE_CHECKING:
     from app.database.models.business import Business
+
+IntegrationType = Literal["google_calendar", "outlook_calendar", "generic"]
 
 
 class BusinessIntegration(Base):
@@ -28,8 +30,7 @@ class BusinessIntegration(Base):
         ForeignKey("businesses.id", ondelete="CASCADE"), index=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    # "google_calendar" | "outlook_calendar" | "generic"
-    type: Mapped[str] = mapped_column(String(30), nullable=False)
+    type: Mapped[IntegrationType] = mapped_column(String(30), nullable=False)
     host: Mapped[str | None] = mapped_column(String(255), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # senha ou api_key, criptografado (ver core/security.py encrypt_secret) -
